@@ -1,0 +1,20 @@
+[
+  {
+    "text": "Project Milestone 2",
+    "completed": false,
+    "due": "2025-07-06",
+    "type": "Reinforcement Learning"
+  },
+  {
+    "text": "Read SecondMe Paper 2",
+    "completed": false,
+    "due": "2025-07-07",
+    "type": "Note-taking Project"
+  },
+  {
+    "text": "111",
+    "completed": false,
+    "due": "2025-10-01",
+    "type": "Work"
+  }
+]

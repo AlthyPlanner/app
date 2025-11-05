@@ -1,0 +1,22 @@
+[
+  {
+    "key": "work",
+    "label": "Work",
+    "color": "#1976d2"
+  },
+  {
+    "key": "study",
+    "label": "Study",
+    "color": "#8e24aa"
+  },
+  {
+    "key": "fitness",
+    "label": "Fitness",
+    "color": "#2e7d32"
+  },
+  {
+    "key": "leisure",
+    "label": "Leisure",
+    "color": "#ef6c00"
+  }
+]
