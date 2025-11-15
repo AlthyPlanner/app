@@ -10,6 +10,7 @@ const TaskModal = ({ onClose, onSave }) => {
   const [goals, setGoals] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const categories = [
     { value: 'work', label: 'Work' },
@@ -24,9 +25,8 @@ const TaskModal = ({ onClose, onSave }) => {
 
   const priorities = [
     { value: 'none', label: 'No Priority' },
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' }
+    { value: 'low', label: 'Low Priority' },
+    { value: 'high', label: 'High Priority' }
   ];
 
   useEffect(() => {
@@ -53,8 +53,16 @@ const TaskModal = ({ onClose, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!taskText.trim()) return;
+    if (!taskText.trim()) {
+      setError('Task title is required');
+      return;
+    }
+    if (!category) {
+      setError('Category is required');
+      return;
+    }
 
+    setError('');
     setLoading(true);
     try {
       const res = await apiFetch('/api/todos', {
@@ -64,15 +72,23 @@ const TaskModal = ({ onClose, onSave }) => {
           todo: taskText,
           due: dueDate || null,
           category: category || '',
-          goal: goal || null
+          goal: goal || null,
+          priority: priority || 'none'
         }),
       });
 
       if (res.ok) {
+        const data = await res.json();
+        console.log('Task added successfully:', data);
         onSave();
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to add task' }));
+        setError(errorData.error || 'Failed to add task. Please try again.');
+        console.error('Failed to add task:', errorData);
       }
     } catch (err) {
       console.error('Failed to add task:', err);
+      setError('Network error. Please check if the server is running.');
     } finally {
       setLoading(false);
     }
@@ -141,6 +157,20 @@ const TaskModal = ({ onClose, onSave }) => {
 
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Error Message */}
+            {error && (
+              <div style={{
+                padding: '12px 16px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                color: '#dc2626',
+                fontSize: '14px'
+              }}>
+                {error}
+              </div>
+            )}
+            
             {/* Task Title */}
             <div>
               <input

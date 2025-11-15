@@ -2,9 +2,66 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, API_BASE } from '../../api';
 import EventModal from '../modals/EventModal';
+import { calculateDailyStatus } from '../../utils/balanceTracker';
+import './CalendarPage.css';
+
+// Event category color palette
+const EVENT_CATEGORY_COLORS = {
+  'Work': '#6A8FA6',        // Steel Blue
+  'Study': '#E6E6FA',       // Soft Lavender
+  'Personal': '#FFE4D1',    // Peach Tint
+  'Leisure': '#C8F5E1',    // Mint Green
+  'Fitness': '#7CCAC1',     // Fresh Blue-Green
+  'Health': '#FFB7A8',      // Soft Coral
+  'Travel': '#F6E4A6',      // Light Golden Sand
+  'Rest': '#DDEFF5'         // Misty Light Blue
+};
+
+// Event category mapping utilities
+const getEventCategoryMapping = () => {
+  try {
+    const stored = localStorage.getItem('eventCategoryMapping');
+    return stored ? JSON.parse(stored) : {};
+  } catch (error) {
+    console.error('Failed to load event category mapping:', error);
+    return {};
+  }
+};
+
+const saveEventCategoryMapping = (mapping) => {
+  try {
+    localStorage.setItem('eventCategoryMapping', JSON.stringify(mapping));
+  } catch (error) {
+    console.error('Failed to save event category mapping:', error);
+  }
+};
+
+const getEventCategory = (eventName) => {
+  const mapping = getEventCategoryMapping();
+  return mapping[eventName] || null;
+};
+
+const setEventCategory = (eventName, category) => {
+  const mapping = getEventCategoryMapping();
+  mapping[eventName] = category;
+  saveEventCategoryMapping(mapping);
+};
+
+// Day starts at 3am, so we need to adjust day comparison
+function getDayStart(date) {
+  const d = new Date(date);
+  // If time is before 3am, consider it part of the previous day
+  if (d.getHours() < 3) {
+    d.setDate(d.getDate() - 1);
+  }
+  d.setHours(3, 0, 0, 0);
+  return d;
+}
 
 function isSameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const dayStartA = getDayStart(a);
+  const dayStartB = getDayStart(b);
+  return dayStartA.getTime() === dayStartB.getTime();
 }
 
 function formatTime(date) {
@@ -32,7 +89,6 @@ const CalendarPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('day'); // 'day' or 'week'
-  const [showSuggestion, setShowSuggestion] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [googleAuth, setGoogleAuth] = useState({ authorized: false, user: null });
   const [outlookAuth, setOutlookAuth] = useState({ authorized: false, user: null });
@@ -40,7 +96,10 @@ const CalendarPage = () => {
   const [sharedCalendars, setSharedCalendars] = useState([]);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showOutlookEvents, setShowOutlookEvents] = useState(true);
-  const [showGoogleEvents, setShowGoogleEvents] = useState(true);
+  const [selectedGoogleCalendar, setSelectedGoogleCalendar] = useState('My calendar');
+  const [dailyStatus, setDailyStatus] = useState(null);
+  const [showStatusMessage, setShowStatusMessage] = useState(true);
+  const [eventCategoryMapping, setEventCategoryMapping] = useState(getEventCategoryMapping());
 
   useEffect(() => {
     const handleResize = () => {
@@ -66,9 +125,18 @@ const CalendarPage = () => {
     
     // Check for OAuth callback parameters
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auth') === 'success') {
+      checkGoogleAuth();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     if (urlParams.get('outlook_auth') === 'success') {
       checkOutlookAuth();
       // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (urlParams.get('error') === 'auth_failed') {
+      alert('Failed to connect Google Calendar. Please try again.');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     if (urlParams.get('error') === 'outlook_auth_failed') {
@@ -80,6 +148,19 @@ const CalendarPage = () => {
   useEffect(() => {
     loadData();
   }, [googleAuth.authorized, outlookAuth.authorized]);
+
+  // Calculate daily status when events/todos change
+  useEffect(() => {
+    if (events.length > 0 || todos.length > 0) {
+      const today = new Date();
+      const status = calculateDailyStatus(events, todos, today);
+      setDailyStatus(status);
+      // Show status message when a new status is calculated
+      if (status && status.message) {
+        setShowStatusMessage(true);
+      }
+    }
+  }, [events, todos]);
 
   const checkOutlookAuth = async () => {
     try {
@@ -153,36 +234,6 @@ const CalendarPage = () => {
           const sharedData = await sharedRes.json();
           const calendars = sharedData.sharedCalendars || [];
           setSharedCalendars(calendars);
-          
-          // Generate mock events for shared calendars (in a real app, these would come from the shared calendar API)
-          const sharedEvents = calendars.flatMap(calendar => {
-            // Generate a few sample events for demonstration
-            const today = new Date();
-            const events = [];
-            for (let i = 0; i < 3; i++) {
-              const eventDate = new Date(today);
-              eventDate.setDate(today.getDate() + i);
-              eventDate.setHours(10 + i * 2, 0, 0, 0);
-              const endDate = new Date(eventDate);
-              endDate.setHours(eventDate.getHours() + 1);
-              
-              events.push({
-                id: `shared-${calendar.id}-${i}`,
-                summary: `${calendar.name}'s Event ${i + 1}`,
-                start: eventDate.toISOString(),
-                end: endDate.toISOString(),
-                source: 'shared',
-                sharedCalendarId: calendar.id,
-                sharedCalendarName: calendar.name,
-                color: calendar.color
-              });
-            }
-            return events;
-          });
-          
-          if (sharedEvents.length > 0) {
-            setEvents(prev => [...prev, ...sharedEvents]);
-          }
         } catch (error) {
           console.error('Failed to load shared calendars:', error);
         }
@@ -203,6 +254,24 @@ const CalendarPage = () => {
     if (event.color) {
       return event.color;
     }
+    
+    // Get event name for category mapping
+    const eventName = event.summary || event.text || '';
+    
+    // Check if there's a category mapping for this event name
+    const mappedCategory = getEventCategory(eventName);
+    if (mappedCategory && EVENT_CATEGORY_COLORS[mappedCategory]) {
+      return EVENT_CATEGORY_COLORS[mappedCategory];
+    }
+    
+    // Use event's category if available
+    if (event.category) {
+      const categoryColor = getCategoryColor(event.category);
+      if (categoryColor !== '#3b82f6') {
+        return categoryColor;
+      }
+    }
+    
     // Style Outlook events with blue border
     if (event.source === 'outlook') {
       return '#0078d4';
@@ -211,11 +280,15 @@ const CalendarPage = () => {
     if (event.source === 'google') {
       return '#10b981';
     }
-    // Otherwise use category color
-    if (event.category) {
-      return getCategoryColor(event.category);
-    }
+    
     return '#3b82f6';
+  };
+  
+  const handleEventCategoryChange = (eventName, category) => {
+    setEventCategory(eventName, category);
+    setEventCategoryMapping(getEventCategoryMapping());
+    // Reload data to update colors
+    loadData();
   };
 
   const getTypeColor = (typeName) => {
@@ -230,10 +303,11 @@ const CalendarPage = () => {
   };
 
   const getDayEvents = () => {
-    const dayStart = new Date(currentDate);
-    dayStart.setHours(0, 0, 0, 0);
+    // Day starts at 3am
+    const dayStart = getDayStart(currentDate);
     const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    dayEnd.setHours(2, 59, 59, 999); // 2:59:59am next day
 
     // Filter events for the selected day and apply visibility filters
     const dayEvents = events.filter(event => {
@@ -241,7 +315,12 @@ const CalendarPage = () => {
       const isInDay = eventStart >= dayStart && eventStart <= dayEnd;
       // Apply source filters
       if (event.source === 'outlook' && !showOutlookEvents) return false;
-      if (event.source === 'google' && !showGoogleEvents) return false;
+      if (event.source === 'google') {
+        // Filter by selected calendar
+        const eventCalendar = event.calendarName || 'My calendar';
+        if (selectedGoogleCalendar === 'My calendar' && eventCalendar !== 'My calendar') return false;
+        if (selectedGoogleCalendar !== 'My calendar' && eventCalendar !== selectedGoogleCalendar) return false;
+      }
       return isInDay;
     }).map(event => ({
       ...event,
@@ -312,7 +391,8 @@ const CalendarPage = () => {
     // Adjust so Monday is the first day (Monday = 1, Sunday = 0)
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     const weekStart = new Date(d.setDate(diff));
-    weekStart.setHours(0, 0, 0, 0);
+    // Week starts at 3am of Monday
+    weekStart.setHours(3, 0, 0, 0);
     return weekStart;
   };
 
@@ -349,7 +429,7 @@ const CalendarPage = () => {
     const weekStart = getWeekStart(currentDate);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
-    weekEnd.setHours(0, 0, 0, 0);
+    weekEnd.setHours(3, 0, 0, 0);
 
     // Filter events for the week and apply visibility filters
     const weekEvents = events.filter(event => {
@@ -357,7 +437,12 @@ const CalendarPage = () => {
       const isInWeek = eventStart >= weekStart && eventStart < weekEnd;
       // Apply source filters
       if (event.source === 'outlook' && !showOutlookEvents) return false;
-      if (event.source === 'google' && !showGoogleEvents) return false;
+      if (event.source === 'google') {
+        // Filter by selected calendar
+        const eventCalendar = event.calendarName || 'My calendar';
+        if (selectedGoogleCalendar === 'My calendar' && eventCalendar !== 'My calendar') return false;
+        if (selectedGoogleCalendar !== 'My calendar' && eventCalendar !== selectedGoogleCalendar) return false;
+      }
       return isInWeek;
     }).map(event => ({
       ...event,
@@ -403,7 +488,10 @@ const CalendarPage = () => {
   const getHourPosition = (date) => {
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    return hours * 60 + minutes; // Position in minutes from midnight
+    // Calculate position from 3am (day start)
+    // Hours before 3am are part of previous day, so add 24 hours
+    const adjustedHours = hours < 3 ? hours + 24 : hours;
+    return (adjustedHours - 3) * 60 + minutes; // Position in minutes from 3am
   };
 
   const getEventHeight = (start, end) => {
@@ -416,7 +504,7 @@ const CalendarPage = () => {
 
   const getEventTop = (start) => {
     const startMinutes = getHourPosition(start);
-    // Start timeline at midnight (0 minutes from midnight)
+    // Start timeline at 3am (0 minutes from 3am)
     const timelineStart = 0;
     const offsetMinutes = startMinutes - timelineStart;
     // Convert minutes to pixels (60px per hour = 1px per minute)
@@ -427,219 +515,144 @@ const CalendarPage = () => {
     return getEventTop(currentTime);
   };
 
-  const hours = Array.from({ length: 24 }, (_, i) => i); // 0 (midnight) to 23 (11pm)
+  // Hours displayed: 3am to 2am (next day), shown as 3, 4, ..., 23, 0, 1, 2
+  const hours = Array.from({ length: 24 }, (_, i) => (i + 3) % 24); // 3am to 2am
 
   const dayEvents = getDayEvents();
   const userName = googleAuth.user?.name || 'User';
 
   return (
-    <div style={{
-      width: '100%',
-      maxWidth: '100%',
-      background: 'white',
-      minHeight: 'calc(100vh - 80px)',
-      paddingBottom: '120px',
-      WebkitOverflowScrolling: 'touch'
-    }}>
+    <div className="calendar-page">
       {/* Header */}
-      <div style={{ 
-        padding: isMobile ? '20px 16px' : '24px 24px 20px',
-        borderBottom: '1px solid #f0f0f0'
-      }}>
-        <h1 style={{
-          margin: '0 0 16px 0',
-          fontSize: isMobile ? '20px' : '24px',
-          fontWeight: '600',
-          color: '#1f2937',
-          lineHeight: '1.3'
-        }}>
-          {getGreeting()}, {userName} — here's your {viewMode === 'week' ? 'week' : 'day'}.
-        </h1>
-
-        {/* View Selector - Segmented Control */}
+      <div className="calendar-header">
         <div style={{
           display: 'flex',
-          background: '#f3f4f6',
-          borderRadius: '10px',
-          padding: '4px',
-          gap: '4px',
-          width: '100%',
-          marginBottom: '16px'
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '16px',
+          gap: '12px'
         }}>
-          <button 
-            onClick={() => setViewMode('day')}
-            style={{ 
-              flex: 1,
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: viewMode === 'day' ? 'white' : 'transparent',
-              color: viewMode === 'day' ? '#1f2937' : '#6b7280',
-              fontSize: '14px',
-              fontWeight: viewMode === 'day' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: viewMode === 'day' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Day
-          </button>
-          <button 
-            onClick={() => setViewMode('week')}
-            style={{ 
-              flex: 1,
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: viewMode === 'week' ? 'white' : 'transparent',
-              color: viewMode === 'week' ? '#1f2937' : '#6b7280',
-              fontSize: '14px',
-              fontWeight: viewMode === 'week' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: viewMode === 'week' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Week
-          </button>
+          <h1 style={{
+            margin: 0,
+            fontSize: isMobile ? '20px' : '24px',
+            fontWeight: '600',
+            color: '#1f2937',
+            lineHeight: '1.3',
+            flex: 1
+          }}>
+            {getGreeting()}, {userName} — here's your {viewMode === 'week' ? 'week' : 'day'}.
+          </h1>
+          
+          {/* Daily Status Badge */}
+          {dailyStatus && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              background: `${dailyStatus.color}15`,
+              border: `1px solid ${dailyStatus.color}40`,
+              flexShrink: 0
+            }}>
+              <span style={{ fontSize: '14px' }}>{dailyStatus.icon}</span>
+              <span style={{
+                fontSize: isMobile ? '11px' : '12px',
+                fontWeight: '600',
+                color: dailyStatus.color,
+                textTransform: 'capitalize'
+              }}>
+                {dailyStatus.status}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Calendar Toggles */}
-        {(googleAuth.authorized || outlookAuth.authorized) && (
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            marginBottom: '16px',
-            flexWrap: 'wrap'
-          }}>
-            {googleAuth.authorized && (
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
-                color: '#374151',
-                cursor: 'pointer',
-                userSelect: 'none'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={showGoogleEvents}
-                  onChange={(e) => setShowGoogleEvents(e.target.checked)}
-                  style={{
-                    width: '18px',
-                    height: '18px',
-                    cursor: 'pointer',
-                    accentColor: '#10b981'
-                  }}
-                />
-                <span>Show Google Calendar</span>
-              </label>
-            )}
-            {outlookAuth.authorized && (
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
-                color: '#374151',
-                cursor: 'pointer',
-                userSelect: 'none'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={showOutlookEvents}
-                  onChange={(e) => setShowOutlookEvents(e.target.checked)}
-                  style={{
-                    width: '18px',
-                    height: '18px',
-                    cursor: 'pointer',
-                    accentColor: '#0078d4'
-                  }}
-                />
-                <span>Show Outlook Calendar</span>
-              </label>
-            )}
+        {/* Daily Status Message */}
+        {dailyStatus && dailyStatus.message && showStatusMessage && (
+          <div className={`status-message ${dailyStatus.status === 'overloaded' ? 'status-message-overloaded' : 'status-message-balanced'}`}>
+            <span style={{ fontSize: '18px' }}>{dailyStatus.icon}</span>
+            <p className={`status-message-text ${dailyStatus.status === 'overloaded' ? 'status-message-text-overloaded' : 'status-message-text-balanced'}`}>
+              {dailyStatus.message}
+            </p>
+            <button
+              onClick={() => setShowStatusMessage(false)}
+              className="status-close-button"
+              style={{
+                color: dailyStatus.status === 'overloaded' ? '#991b1b' : '#92400e'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
         )}
 
-        {/* Date Navigation */}
+        {/* View Selector and Calendar Toggle */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '12px',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          marginBottom: '16px'
         }}>
+          {/* View Selector - Segmented Control */}
+          <div className="view-selector">
+            <button 
+              onClick={() => setViewMode('day')}
+              className={`view-button ${viewMode === 'day' ? 'view-button-active' : 'view-button-inactive'}`}
+            >
+              Day
+            </button>
+            <button 
+              onClick={() => setViewMode('week')}
+              className={`view-button ${viewMode === 'week' ? 'view-button-active' : 'view-button-inactive'}`}
+            >
+              Week
+            </button>
+          </div>
+
+          {/* Calendar Selector */}
+          {googleAuth.authorized && (
+            <div className="calendar-selector">
+              <select
+                value={selectedGoogleCalendar}
+                onChange={(e) => setSelectedGoogleCalendar(e.target.value)}
+                className="calendar-select"
+              >
+                <option value="My calendar">My calendar</option>
+                <option value="Mom's calendar">Mom's calendar</option>
+                <option value="Friend's calendar">Friend's calendar</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Date Navigation */}
+        <div className="date-navigation">
           <div>
             {viewMode === 'week' ? (
-              <div style={{
-                fontSize: isMobile ? '18px' : '20px',
-                fontWeight: '600',
-                color: '#1f2937',
-                marginBottom: '2px'
-              }}>
+              <div className="date-display" style={{ fontSize: isMobile ? '18px' : '20px' }}>
                 {formatWeekRange()}
               </div>
             ) : (
               <>
-                <div style={{
-                  fontSize: isMobile ? '18px' : '20px',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  marginBottom: '2px'
-                }}>
+                <div className="date-display" style={{ fontSize: isMobile ? '18px' : '20px' }}>
                   {formatDateDisplay(currentDate)}
                 </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: '#6b7280'
-                }}>
+                <div className="date-month-year">
                   {formatMonthYear(currentDate)}
                 </div>
               </>
             )}
           </div>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <button
-              onClick={() => {}}
-              style={{
-                background: 'transparent',
-                border: 'none',
-              cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 16v-4"/>
-                <path d="M12 8h.01"/>
-              </svg>
-            </button>
+          <div className="nav-buttons">
             <button
               onClick={viewMode === 'week' ? goToPrevWeek : goToPrevDay}
-              style={{
-                background: 'transparent',
-                border: 'none',
-              cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+              className="nav-button"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="15 18 9 12 15 6"/>
@@ -647,39 +660,13 @@ const CalendarPage = () => {
             </button>
             <button
               onClick={goToToday}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '20px',
-                border: '1px solid #e5e7eb',
-              background: 'white',
-              color: '#374151',
-                fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = '#f9fafb';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'white';
-              }}
+              className="today-button"
             >
               Now
             </button>
             <button
               onClick={viewMode === 'week' ? goToNextWeek : goToNextDay}
-              style={{
-                background: 'transparent',
-                border: 'none',
-              cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+              className="nav-button"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="9 18 15 12 9 6"/>
@@ -688,66 +675,6 @@ const CalendarPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Suggestion Banner */}
-      {showSuggestion && (
-      <div style={{ 
-          margin: '16px',
-          padding: '16px',
-          background: '#fff7ed',
-          borderRadius: '12px',
-          border: '1px solid #fed7aa',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '12px'
-        }}>
-          <div style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            background: '#f97316',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            marginTop: '2px'
-          }}>
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>!</span>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: '15px',
-              fontWeight: '600',
-              color: '#1f2937',
-              marginBottom: '4px'
-            }}>
-              Time to recharge
-            </div>
-            <div style={{
-              fontSize: '13px',
-              color: '#6b7280'
-            }}>
-              Consider adding more rest or leisure time
-            </div>
-          </div>
-          <button
-            onClick={() => setShowSuggestion(false)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              color: '#6b7280',
-              flexShrink: 0
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-      </div>
-      )}
 
       {/* Timeline */}
       {viewMode === 'day' && (
@@ -780,7 +707,7 @@ const CalendarPage = () => {
                     color: '#9ca3af',
                     fontWeight: '500'
                   }}>
-                    {hour === 0 ? '12 am' : hour === 12 ? '12 pm' : hour > 12 ? `${hour - 12} pm` : `${hour} am`}
+                    {hour === 0 ? '12 am' : hour === 3 ? '3 am' : hour === 12 ? '12 pm' : hour > 12 ? `${hour - 12} pm` : `${hour} am`}
                   </span>
                 </div>
               ))}
@@ -827,23 +754,45 @@ const CalendarPage = () => {
                 const height = getEventHeight(item.startTime, item.endTime);
                 const isTask = item.type === 'task';
                 
-                      return (
+                // For tasks, show only a small indicator
+                if (isTask) {
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        position: 'absolute',
+                        top: `${top}px`,
+                        left: '4px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: item.color,
+                        border: `2px solid white`,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        zIndex: 10,
+                        cursor: 'default'
+                      }}
+                      title={item.text || item.summary}
+                    />
+                  );
+                }
+                
+                // For events, show full details
+                return (
                   <div
                     key={index}
                     onClick={() => {
-                      if (item.type === 'event') {
-                        // Ensure we pass the full event object with all properties
-                        const eventToShow = {
-                          id: item.id,
-                          summary: item.summary,
-                          start: item.start || item.startTime?.toISOString(),
-                          end: item.end || item.endTime?.toISOString(),
-                          category: item.category,
-                          ...item
-                        };
-                        setSelectedEvent(eventToShow);
-                        setShowEventModal(true);
-                      }
+                      // Ensure we pass the full event object with all properties
+                      const eventToShow = {
+                        id: item.id,
+                        summary: item.summary,
+                        start: item.start || item.startTime?.toISOString(),
+                        end: item.end || item.endTime?.toISOString(),
+                        category: item.category,
+                        ...item
+                      };
+                      setSelectedEvent(eventToShow);
+                      setShowEventModal(true);
                     }}
                     style={{
                       position: 'absolute',
@@ -852,10 +801,10 @@ const CalendarPage = () => {
                       right: 0,
                       height: `${height}px`,
                       background: `${item.color}20`,
-                      border: isTask ? `2px dashed ${item.color}` : `2px solid ${item.color}`,
+                      border: `2px solid ${item.color}`,
                       borderRadius: '8px',
                       padding: '8px 12px',
-                      cursor: item.type === 'event' ? 'pointer' : 'default',
+                      cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       flexDirection: 'column',
@@ -865,47 +814,29 @@ const CalendarPage = () => {
                       boxSizing: 'border-box'
                     }}
                     onMouseOver={(e) => {
-                      if (item.type === 'event') {
-                        e.currentTarget.style.background = `${item.color}30`;
-                        e.currentTarget.style.transform = 'scale(1.02)';
-                      }
+                      e.currentTarget.style.background = `${item.color}30`;
+                      e.currentTarget.style.transform = 'scale(1.02)';
                     }}
                     onMouseOut={(e) => {
-                      if (item.type === 'event') {
-                        e.currentTarget.style.background = `${item.color}20`;
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }
+                      e.currentTarget.style.background = `${item.color}20`;
+                      e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    {isTask && (
-                        <div style={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginBottom: '4px'
-                      }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={item.color} strokeWidth="2">
-                          <polyline points="9 11 12 14 22 4"/>
-                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                        </svg>
-                      </div>
-                    )}
                     <div style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
+                      fontSize: '11px',
+                      fontWeight: '400',
                       color: '#1f2937',
-                      marginBottom: height > 50 ? '4px' : '0',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: height > 50 ? 'normal' : 'nowrap',
-                      wordBreak: height > 50 ? 'break-word' : 'normal',
-                      lineHeight: '1.4',
-                      maxHeight: height > 50 ? 'none' : '20px'
+                      whiteSpace: height > 30 ? 'normal' : 'nowrap',
+                      wordBreak: 'break-word',
+                      lineHeight: '1.1',
+                      maxHeight: height > 30 ? 'none' : '14px'
                     }}>
                       {item.summary || item.text}
                       {item.sharedCalendarName && (
                         <span style={{
-                          fontSize: '11px',
+                          fontSize: '10px',
                           fontWeight: '400',
                           color: '#6b7280',
                           marginLeft: '6px'
@@ -914,19 +845,9 @@ const CalendarPage = () => {
                         </span>
                       )}
                     </div>
-                    {height > 50 && (
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#6b7280',
-                        marginTop: '4px',
-                        lineHeight: '1.3'
-                      }}>
-                        {formatTime(item.startTime)} - {formatTime(item.endTime)}
-                      </div>
-                    )}
-                      </div>
-                    );
-                  })}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1040,8 +961,8 @@ const CalendarPage = () => {
                       fontWeight: '500',
                       lineHeight: '1'
                     }}>
-                      {hour === 0 ? '12' : hour === 12 ? '12' : hour > 12 ? `${hour - 12}` : `${hour}`}
-                      {isMobile ? '' : (hour === 0 ? ' am' : hour === 12 ? ' pm' : hour > 12 ? ' pm' : ' am')}
+                      {hour === 0 ? '12' : hour === 3 ? '3' : hour === 12 ? '12' : hour > 12 ? `${hour - 12}` : `${hour}`}
+                      {isMobile ? '' : (hour === 0 ? ' am' : hour === 3 ? ' am' : hour === 12 ? ' pm' : hour > 12 ? ' pm' : ' am')}
                     </span>
                   </div>
                 ))}
@@ -1049,10 +970,10 @@ const CalendarPage = () => {
 
               {/* Day Columns */}
               {getWeekDays().map((day, dayIndex) => {
-                const dayStart = new Date(day);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayEnd = new Date(day);
-                dayEnd.setHours(23, 59, 59, 999);
+                const dayStart = getDayStart(day);
+                const dayEnd = new Date(dayStart);
+                dayEnd.setDate(dayEnd.getDate() + 1);
+                dayEnd.setHours(2, 59, 59, 999); // 2:59:59am next day
 
                 const dayEvents = getWeekEvents().filter(item => {
                   const eventStart = new Date(item.startTime);
@@ -1119,25 +1040,46 @@ const CalendarPage = () => {
                       const height = isMobile ? getEventHeight(item.startTime, item.endTime) * (45/60) : getEventHeight(item.startTime, item.endTime);
                       const isTask = item.type === 'task';
                       const eventText = item.summary || item.text || '';
-                      const canShowTime = height > (isMobile ? 25 : 35);
                       
+                      // For tasks, show only a small indicator
+                      if (isTask) {
+                        return (
+                          <div
+                            key={eventIndex}
+                            style={{
+                              position: 'absolute',
+                              top: `${top}px`,
+                              left: isMobile ? '2px' : '4px',
+                              width: isMobile ? '6px' : '8px',
+                              height: isMobile ? '6px' : '8px',
+                              borderRadius: '50%',
+                              background: item.color,
+                              border: `2px solid white`,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                              zIndex: 10,
+                              cursor: 'default'
+                            }}
+                            title={item.text || item.summary}
+                          />
+                        );
+                      }
+                      
+                      // For events, show full details
                       return (
                         <div
                           key={eventIndex}
                           onClick={() => {
-                            if (item.type === 'event') {
-                              // Ensure we pass the full event object with all properties
-                              const eventToShow = {
-                                id: item.id,
-                                summary: item.summary,
-                                start: item.start || item.startTime?.toISOString(),
-                                end: item.end || item.endTime?.toISOString(),
-                                category: item.category,
-                                ...item
-                              };
-                              setSelectedEvent(eventToShow);
-                              setShowEventModal(true);
-                            }
+                            // Ensure we pass the full event object with all properties
+                            const eventToShow = {
+                              id: item.id,
+                              summary: item.summary,
+                              start: item.start || item.startTime?.toISOString(),
+                              end: item.end || item.endTime?.toISOString(),
+                              category: item.category,
+                              ...item
+                            };
+                            setSelectedEvent(eventToShow);
+                            setShowEventModal(true);
                           }}
                           style={{
                             position: 'absolute',
@@ -1146,49 +1088,39 @@ const CalendarPage = () => {
                             right: isMobile ? '1px' : '4px',
                             height: `${height}px`,
                             background: `${item.color}25`,
-                            border: isTask ? `1.5px dashed ${item.color}` : `1.5px solid ${item.color}`,
+                            border: `1.5px solid ${item.color}`,
                             borderRadius: isMobile ? '3px' : '6px',
-                            padding: isMobile ? '4px 6px' : '8px 10px',
-                            cursor: item.type === 'event' ? 'pointer' : 'default',
+                            padding: isMobile ? '2px 3px' : '4px 5px',
+                            cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             display: 'flex',
                             flexDirection: 'column',
-                            justifyContent: canShowTime ? 'flex-start' : 'center',
+                            justifyContent: 'center',
                             minHeight: isMobile ? '20px' : '32px',
                             zIndex: 1,
                             overflow: 'hidden',
                             boxSizing: 'border-box'
                           }}
                           onMouseOver={(e) => {
-                            if (item.type === 'event') {
-                              e.currentTarget.style.background = `${item.color}35`;
-                              e.currentTarget.style.zIndex = 2;
-                            }
+                            e.currentTarget.style.background = `${item.color}35`;
+                            e.currentTarget.style.zIndex = 2;
                           }}
                           onMouseOut={(e) => {
-                            if (item.type === 'event') {
-                              e.currentTarget.style.background = `${item.color}25`;
-                              e.currentTarget.style.zIndex = 1;
-                            }
+                            e.currentTarget.style.background = `${item.color}25`;
+                            e.currentTarget.style.zIndex = 1;
                           }}
                         >
-                          {isTask && (
-                            <svg width={isMobile ? "8" : "12"} height={isMobile ? "8" : "12"} viewBox="0 0 24 24" fill="none" stroke={item.color} strokeWidth="2" style={{ marginBottom: '2px', flexShrink: 0, marginRight: '4px' }}>
-                              <polyline points="9 11 12 14 22 4"/>
-                              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                            </svg>
-                          )}
                           <div style={{
-                            fontSize: isMobile ? '11px' : '13px',
-                            fontWeight: '600',
+                            fontSize: isMobile ? '10px' : '11px',
+                            fontWeight: '400',
                             color: '#111827',
-                            lineHeight: '1.4',
+                            lineHeight: '1.1',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            whiteSpace: canShowTime ? 'normal' : 'nowrap',
+                            whiteSpace: height > (isMobile ? 25 : 30) ? 'normal' : 'nowrap',
                             wordBreak: 'break-word',
                             display: '-webkit-box',
-                            WebkitLineClamp: canShowTime ? 3 : 2,
+                            WebkitLineClamp: height > (isMobile ? 25 : 30) ? 4 : 3,
                             WebkitBoxOrient: 'vertical',
                             flex: 1,
                             textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
@@ -1205,17 +1137,6 @@ const CalendarPage = () => {
                               </span>
                             )}
                           </div>
-                          {canShowTime && !isTask && (
-                            <div style={{
-                              fontSize: isMobile ? '8px' : '10px',
-                              color: '#6b7280',
-                              marginTop: '2px',
-                              lineHeight: '1.2',
-                              flexShrink: 0
-                            }}>
-                              {formatTime(item.startTime)} - {formatTime(item.endTime)}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -1368,6 +1289,8 @@ const CalendarPage = () => {
         <EventModal
           event={selectedEvent}
           categories={categories}
+          eventCategoryMapping={eventCategoryMapping}
+          onCategoryChange={handleEventCategoryChange}
           onClose={() => {
             setShowEventModal(false);
             setSelectedEvent(null);

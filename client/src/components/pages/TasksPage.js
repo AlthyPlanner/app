@@ -224,7 +224,8 @@ const TasksPage = () => {
       {/* Task List */}
       <div style={{
         padding: isMobile ? '16px' : '24px',
-        maxWidth: '800px',
+        maxWidth: '1200px',
+        width: '100%',
         margin: '0 auto',
         flex: 1
       }}>
@@ -234,18 +235,20 @@ const TasksPage = () => {
         />
       </div>
 
-      {/* Quick Notes - Sticky Bottom (only show for Today and This week views) */}
+      {/* Quick Notes - Connected to menu (only show for Today and This week views) */}
       {viewMode !== 'all' && (
         <div style={{
           position: 'fixed',
-          bottom: isMobile ? '100px' : '120px',
+          bottom: isMobile ? '80px' : '80px',
           left: 0,
           right: 0,
-          maxWidth: '800px',
+          maxWidth: '1200px',
+          width: '100%',
           margin: '0 auto',
           padding: isMobile ? '16px' : '24px',
+          paddingBottom: isMobile ? '16px' : '24px',
           background: 'white',
-          borderTop: '1px solid #f0f0f0',
+          borderTop: '1px solid #e5e7eb',
           zIndex: 100
         }}>
           <QuickNotes date={getNotesDate()} />

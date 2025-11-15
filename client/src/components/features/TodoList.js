@@ -10,7 +10,11 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
   const [editText, setEditText] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
   const [editType, setEditType] = useState('');
+  const [editPriority, setEditPriority] = useState('none');
   const [openStatusMenu, setOpenStatusMenu] = useState(null);
+  const [openPriorityMenu, setOpenPriorityMenu] = useState(null);
+  const [sortBy, setSortBy] = useState('time'); // 'time', 'priority', 'category'
+  const [categoryFilter, setCategoryFilter] = useState(''); // '' means all categories
 
   useEffect(() => {
     loadTodos();
@@ -104,12 +108,19 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
           setOpenStatusMenu(null);
         }
       }
+      if (openPriorityMenu !== null) {
+        const menuContainer = event.target.closest('.priority-menu-container');
+        const menuDropdown = event.target.closest('.priority-dropdown-menu');
+        if (!menuContainer && !menuDropdown) {
+          setOpenPriorityMenu(null);
+        }
+      }
     };
-    if (openStatusMenu !== null) {
+    if (openStatusMenu !== null || openPriorityMenu !== null) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [openStatusMenu]);
+  }, [openStatusMenu, openPriorityMenu]);
 
   const deleteTodo = async (index) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
@@ -192,9 +203,96 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     return colors[typeName] || '#6b7280';
   };
 
+  const getPriorityFlagColor = (priority) => {
+    if (priority === 'high') return '#dc2626'; // Red
+    if (priority === 'low') return '#3b82f6'; // Blue
+    return '#9ca3af'; // Gray for none
+  };
+
+  const updatePriority = async (index, priority) => {
+    try {
+      const res = await apiFetch(`/api/todos/${index}/priority`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority })
+      });
+      if (res.ok) {
+        setOpenPriorityMenu(null);
+        await loadTodos();
+      }
+    } catch (err) {
+      console.error('Failed to update priority:', err);
+    }
+  };
+
   const getCategoryLabel = (category) => {
     if (!category) return '';
     return category.charAt(0).toUpperCase() + category.slice(1);
+  };
+
+  const categories = [
+    { value: '', label: 'All Categories' },
+    { value: 'work', label: 'Work' },
+    { value: 'study', label: 'Study' },
+    { value: 'personal', label: 'Personal' },
+    { value: 'leisure', label: 'Leisure' },
+    { value: 'fitness', label: 'Fitness' },
+    { value: 'travel', label: 'Travel' },
+    { value: 'health', label: 'Health' },
+    { value: 'rest', label: 'Rest' }
+  ];
+
+  const sortTodos = (todoList) => {
+    const sorted = [...todoList];
+    
+    if (sortBy === 'time') {
+      sorted.sort((a, b) => {
+        if (!a.due && !b.due) return 0;
+        if (!a.due) return 1; // Tasks without due dates go to end
+        if (!b.due) return -1;
+        return new Date(a.due) - new Date(b.due);
+      });
+    } else if (sortBy === 'priority') {
+      sorted.sort((a, b) => {
+        const priorityA = getDaysUntilDue(a.due);
+        const priorityB = getDaysUntilDue(b.due);
+        
+        // Overdue (negative) comes first, then due today (0), then tomorrow (1), then others
+        if (priorityA === null && priorityB === null) return 0;
+        if (priorityA === null) return 1;
+        if (priorityB === null) return -1;
+        
+        // Negative (overdue) comes first
+        if (priorityA < 0 && priorityB >= 0) return -1;
+        if (priorityA >= 0 && priorityB < 0) return 1;
+        
+        // Among overdue, more overdue comes first
+        if (priorityA < 0 && priorityB < 0) return priorityA - priorityB;
+        
+        // Among non-overdue, lower number (sooner) comes first
+        return priorityA - priorityB;
+      });
+    } else if (sortBy === 'category') {
+      sorted.sort((a, b) => {
+        const catA = (a.category || '').toLowerCase();
+        const catB = (b.category || '').toLowerCase();
+        if (catA === catB) {
+          // If same category, sort by time
+          if (!a.due && !b.due) return 0;
+          if (!a.due) return 1;
+          if (!b.due) return -1;
+          return new Date(a.due) - new Date(b.due);
+        }
+        return catA.localeCompare(catB);
+      });
+    }
+    
+    return sorted;
+  };
+
+  const filterTodosByCategory = (todoList) => {
+    if (!categoryFilter) return todoList;
+    return todoList.filter(todo => (todo.category || '').toLowerCase() === categoryFilter.toLowerCase());
   };
 
   const filterTodosByDate = (todoList) => {
@@ -242,8 +340,16 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     });
   };
 
-  const activeTodos = filterTodosByDate(todos.filter(todo => !todo.completed));
-  const completedTodos = todos.filter(todo => todo.completed);
+  // Apply filters and sorting
+  const filteredActiveTodos = filterTodosByDate(
+    filterTodosByCategory(todos.filter(todo => !todo.completed))
+  );
+  const filteredCompletedTodos = filterTodosByCategory(
+    todos.filter(todo => todo.completed)
+  );
+  
+  const activeTodos = sortTodos(filteredActiveTodos);
+  const completedTodos = sortTodos(filteredCompletedTodos);
 
   // Separate today's tasks from past due tasks (only for 'today' view)
   const getTodayAndPastDueTodos = () => {
@@ -257,7 +363,12 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     const todayTodos = [];
     const pastDueTodos = [];
 
-    activeTodos.forEach(todo => {
+    // Use filteredActiveTodos before sorting to properly separate
+    const preSortedActive = filterTodosByDate(
+      filterTodosByCategory(todos.filter(todo => !todo.completed))
+    );
+
+    preSortedActive.forEach(todo => {
       if (!todo.due) {
         // Tasks without due dates go to today's list
         todayTodos.push(todo);
@@ -274,7 +385,11 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
       }
     });
 
-    return { todayTodos, pastDueTodos };
+    // Apply sorting to separated lists
+    return { 
+      todayTodos: sortTodos(todayTodos), 
+      pastDueTodos: sortTodos(pastDueTodos) 
+    };
   };
 
   const { todayTodos, pastDueTodos } = getTodayAndPastDueTodos();
@@ -310,12 +425,15 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     const todoDue = todo.due || null;
     const todoType = todo.type || todo.category || '';
     const todoStatus = todo.status || null;
+    const todoPriority = todo.priority || 'none';
     const daysUntilDue = getDaysUntilDue(todoDue);
     const dueInfo = getDueText(todoDue);
-    const priorityColor = getPriorityColor(daysUntilDue);
+    const dueDatePriorityColor = getPriorityColor(daysUntilDue);
+    const priorityFlagColor = getPriorityFlagColor(todoPriority);
     const tagColor = getTagColor(todoType);
     const mobile = isMobile();
     const isStatusMenuOpen = openStatusMenu === index;
+    const isPriorityMenuOpen = openPriorityMenu === index;
     
     // Determine if we're in "this week" view
     const effectiveDateFilter = viewMode === 'today' && dateFilter === 'today' ? 'today' :
@@ -348,9 +466,11 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
           e.currentTarget.style.boxShadow = 'none';
         }}
         onClick={(e) => {
-          // Don't close menu if clicking inside the status menu area
-          if (!e.target.closest('.status-menu-container') && !e.target.closest('.status-dropdown-menu')) {
+          // Don't close menu if clicking inside the status menu area or priority menu area
+          if (!e.target.closest('.status-menu-container') && !e.target.closest('.status-dropdown-menu') &&
+              !e.target.closest('.priority-menu-container') && !e.target.closest('.priority-dropdown-menu')) {
             setOpenStatusMenu(null);
+            setOpenPriorityMenu(null);
           }
         }}
       >
@@ -374,11 +494,9 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
               borderRadius: '50%',
               border: todoStatus === 'complete' ? '2px solid #10b981' : 
                       todoStatus === 'in_progress' ? 'none' :
-                      todoStatus === 'forward' ? '2px solid #f97316' :
                       '2px solid #d1d5db',
               background: todoStatus === 'complete' ? '#10b981' : 
                           todoStatus === 'in_progress' ? 'transparent' :
-                          todoStatus === 'forward' ? 'white' :
                           'white',
               display: 'flex',
               alignItems: 'center',
@@ -399,8 +517,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
               if (status === 'in_progress') {
                 e.currentTarget.style.border = 'none';
               } else {
-                e.currentTarget.style.borderColor = status === 'complete' ? '#10b981' : 
-                                                   status === 'forward' ? '#f97316' : '#d1d5db';
+                e.currentTarget.style.borderColor = status === 'complete' ? '#10b981' : '#d1d5db';
               }
             }}
           >
@@ -409,16 +526,6 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
-              </svg>
-            )}
-            {todoStatus === 'forward' && (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-                {/* Clock circle */}
-                <circle cx="12" cy="12" r="10"/>
-                {/* Shorter hand pointing right (3 o'clock) */}
-                <line x1="12" y1="12" x2="15" y2="12" strokeWidth="2.5"/>
-                {/* Longer hand pointing slightly up-right (around 1:10) */}
-                <line x1="12" y1="12" x2="14" y2="8" strokeWidth="1.5"/>
               </svg>
             )}
           </div>
@@ -583,16 +690,161 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
           </div>
         </div>
 
-        {/* Priority Indicator */}
-        {priorityColor && !todoCompleted && (
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: priorityColor,
+        {/* Priority Flag Icon */}
+        {!todoCompleted && (
+          <div 
+            className="priority-menu-container"
+            style={{ 
             flexShrink: 0,
-            marginTop: '6px'
-          }} />
+              marginTop: '2px',
+              position: 'relative'
+            }}
+          >
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenPriorityMenu(isPriorityMenuOpen ? null : index);
+              }}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#f3f4f6';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <svg 
+                width="18" 
+                height="18" 
+                viewBox="0 0 24 24" 
+                fill={priorityFlagColor} 
+                stroke={priorityFlagColor} 
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ opacity: todoPriority === 'none' ? 0.3 : 1 }}
+              >
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+            </div>
+
+            {/* Priority Dropdown Menu */}
+            {isPriorityMenuOpen && (
+              <div
+                className="priority-dropdown-menu"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'absolute',
+                  top: '28px',
+                  right: 0,
+                  background: 'white',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  zIndex: 10000,
+                  minWidth: '140px',
+                  overflow: 'hidden',
+                  border: '1px solid #e5e7eb',
+                  pointerEvents: 'auto'
+                }}
+              >
+                <div
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    await updatePriority(index, 'none');
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    color: '#374151'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#f9fafb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'white';
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#9ca3af" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }}>
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>No Priority</span>
+                </div>
+                <div
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    await updatePriority(index, 'low');
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    color: '#374151',
+                    borderTop: '1px solid #f3f4f6'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#f9fafb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'white';
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#3b82f6" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>Low Priority</span>
+                </div>
+                <div
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    await updatePriority(index, 'high');
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    color: '#374151',
+                    borderTop: '1px solid #f3f4f6'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#f9fafb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'white';
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>High Priority</span>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Edit/Delete Buttons */}
@@ -609,6 +861,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 setEditText(todoText);
                 setEditDueDate(todoDue ? new Date(todoDue).toISOString().slice(0, 16) : '');
                 setEditType(todoType);
+                setEditPriority(todoPriority);
               }}
               style={{
                 background: 'transparent',
@@ -657,6 +910,106 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
 
   return (
     <div style={{ width: '100%' }}>
+      {/* Sorting and Filter Controls */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '24px',
+        flexWrap: 'wrap'
+      }}>
+        {/* Category Filter Dropdown - Only show when sorting by category */}
+        {sortBy === 'category' && (
+          <div style={{ position: 'relative', minWidth: mobile ? '140px' : '160px' }}>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 32px 8px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                fontSize: '13px',
+                outline: 'none',
+                background: 'white',
+                boxSizing: 'border-box',
+                appearance: 'none',
+                cursor: 'pointer',
+                color: '#374151',
+                fontWeight: '500'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+            >
+              {categories.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+            <div style={{
+              position: 'absolute',
+              right: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none',
+              color: '#6b7280'
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+          </div>
+        )}
+
+        {/* Sort By Dropdown */}
+        <div style={{ position: 'relative', minWidth: mobile ? '120px' : '140px' }}>
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              // Reset category filter when changing sort method
+              if (e.target.value !== 'category') {
+                setCategoryFilter('');
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 32px 8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              fontSize: '13px',
+              outline: 'none',
+              background: 'white',
+              boxSizing: 'border-box',
+              appearance: 'none',
+              cursor: 'pointer',
+              color: '#374151',
+              fontWeight: '500'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+          >
+            <option value="time">By Time</option>
+            <option value="priority">By Priority</option>
+            <option value="category">By Category</option>
+          </select>
+          <div style={{
+            position: 'absolute',
+            right: '8px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: '#6b7280'
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       {/* Today's Tasks Section (only for today view) */}
       {viewMode === 'today' && dateFilter === 'today' && todayTodos.length > 0 && (
         <div style={{ marginBottom: '32px' }}>
@@ -710,26 +1063,6 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
           </h3>
           <div>
             {activeTodos.map((todo, index) => {
-              const originalIndex = todos.findIndex(t => t === todo);
-              return renderTask(todo, originalIndex);
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Completed Section */}
-      {completedTodos.length > 0 && (
-        <div>
-          <h3 style={{
-            margin: '0 0 16px 0',
-            fontSize: mobile ? '18px' : '20px',
-            fontWeight: '600',
-            color: '#6b7280'
-          }}>
-            Completed ({completedTodos.length})
-          </h3>
-          <div>
-            {completedTodos.map((todo, index) => {
               const originalIndex = todos.findIndex(t => t === todo);
               return renderTask(todo, originalIndex);
             })}
@@ -796,6 +1129,26 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
           </svg>
           <p style={{ fontSize: '16px', margin: '0 0 16px 0' }}>No tasks yet. Add one to get started!</p>
+        </div>
+      )}
+
+      {/* Completed Section - Show after empty state */}
+      {completedTodos.length > 0 && (
+        <div style={{ marginTop: '32px' }}>
+          <h3 style={{
+            margin: '0 0 16px 0',
+            fontSize: mobile ? '18px' : '20px',
+            fontWeight: '600',
+            color: '#6b7280'
+          }}>
+            Completed ({completedTodos.length})
+          </h3>
+          <div>
+            {completedTodos.map((todo, index) => {
+              const originalIndex = todos.findIndex(t => t === todo);
+              return renderTask(todo, originalIndex);
+            })}
+          </div>
         </div>
       )}
 
@@ -880,6 +1233,24 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   boxSizing: 'border-box'
                 }}
               />
+              <select
+                value={editPriority}
+                onChange={(e) => setEditPriority(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  outline: 'none',
+                  background: 'white',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="none">No Priority</option>
+                <option value="low">Low Priority</option>
+                <option value="high">High Priority</option>
+              </select>
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button
                   onClick={() => setEditingIndex(null)}
@@ -906,7 +1277,8 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                         body: JSON.stringify({
                           todo: editText,
                           due: editDueDate || null,
-                          type: editType || ''
+                          type: editType || '',
+                          priority: editPriority || 'none'
                         }),
                       });
                       if (res.ok) {

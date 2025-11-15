@@ -14,6 +14,9 @@ router.patch('/:index/toggle', todoController.toggleTodo);
 // Update task status
 router.patch('/:index/status', todoController.updateStatus);
 
+// Update priority
+router.patch('/:index/priority', todoController.updatePriority);
+
 // Update a todo
 router.put('/:index', todoController.updateTodo);
 

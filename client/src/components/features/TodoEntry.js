@@ -7,6 +7,7 @@ const TodoEntry = ({ onAddTodo }) => {
   const [newTodo, setNewTodo] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
   const [newType, setNewType] = useState('');
+  const [newPriority, setNewPriority] = useState('none');
   const [types, setTypes] = useState([]);
   const [mobile, setMobile] = useState(isMobile());
 
@@ -43,7 +44,8 @@ const TodoEntry = ({ onAddTodo }) => {
       const todoData = { 
         todo: newTodo,
         due: newDueDate || null,
-        type: newType || ''
+        type: newType || '',
+        priority: newPriority || 'none'
       };
       
       const res = await apiFetch('/api/todos', {
@@ -56,6 +58,7 @@ const TodoEntry = ({ onAddTodo }) => {
         setNewTodo('');
         setNewDueDate('');
         setNewType('');
+        setNewPriority('none');
         onAddTodo(); // Callback to refresh the todo list
       }
     } catch (err) {
@@ -147,6 +150,28 @@ const TodoEntry = ({ onAddTodo }) => {
             onFocus={(e) => e.target.style.borderColor = '#2196F3'}
             onBlur={(e) => e.target.style.borderColor = '#ddd'}
           />
+          <select
+            value={newPriority}
+            onChange={(e) => setNewPriority(e.target.value)}
+            style={{ 
+              padding: mobile ? '14px' : '12px 16px', 
+              border: '1px solid #ddd', 
+              borderRadius: '8px', 
+              fontSize: mobile ? '16px' : '14px',
+              minWidth: mobile ? '100%' : '120px',
+              width: mobile ? '100%' : 'auto',
+              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+              transition: 'border-color 0.2s ease',
+              background: 'white',
+              cursor: 'pointer'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#2196F3'}
+            onBlur={(e) => e.target.style.borderColor = '#ddd'}
+          >
+            <option value="none">No Priority</option>
+            <option value="low">Low Priority</option>
+            <option value="high">High Priority</option>
+          </select>
           <button 
             type="submit" 
             style={{ 

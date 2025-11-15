@@ -48,10 +48,10 @@ router.get('/auth/google',
 );
 
 router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3001/calendar?error=auth_failed' }),
+  passport.authenticate('google', { failureRedirect: 'http://localhost:3001/app/plan?error=auth_failed' }),
   (req, res) => {
-    // Successful authentication, redirect to frontend calendar with success
-    res.redirect('http://localhost:3001/calendar?auth=success');
+    // Successful authentication, redirect to frontend plan page with success
+    res.redirect('http://localhost:3001/app/plan?auth=success');
   }
 );
 

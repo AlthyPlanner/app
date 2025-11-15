@@ -12,7 +12,7 @@ const outlookRoutes = require('./routes/outlookRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(express.json());
@@ -47,7 +47,10 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
 
 app.use('/api/types', typeRoutes);
 app.use('/api/google', googleRoutes);
-app.use('/api/outlook', outlookRoutes);
+// Mount Outlook routes only if credentials are present
+if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
+  app.use('/api/outlook', outlookRoutes);
+}
 app.use('/api/calendar', calendarRoutes);
 
 // Basic route

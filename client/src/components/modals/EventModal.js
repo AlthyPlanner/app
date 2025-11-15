@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../api';
 
-const EventModal = ({ event, categories, onClose, onSave }) => {
+// Event category color palette (same as CalendarPage)
+const EVENT_CATEGORY_COLORS = {
+  'Work': '#6A8FA6',        // Steel Blue
+  'Study': '#E6E6FA',       // Soft Lavender
+  'Personal': '#FFE4D1',    // Peach Tint
+  'Leisure': '#C8F5E1',     // Mint Green
+  'Fitness': '#7CCAC1',     // Fresh Blue-Green
+  'Health': '#FFB7A8',      // Soft Coral
+  'Travel': '#F6E4A6',      // Light Golden Sand
+  'Rest': '#DDEFF5'         // Misty Light Blue
+};
+
+const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryChange, onClose, onSave }) => {
   const [summary, setSummary] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -63,7 +75,8 @@ const EventModal = ({ event, categories, onClose, onSave }) => {
   // Initialize form fields when event changes
   useEffect(() => {
     if (event) {
-      setSummary(event.summary || event.text || '');
+      const eventName = event.summary || event.text || '';
+      setSummary(eventName);
       if (event.start || event.startTime) {
         const startDate = event.start ? new Date(event.start) : new Date(event.startTime);
         setDate(startDate.toISOString().split('T')[0]);
@@ -82,7 +95,9 @@ const EventModal = ({ event, categories, onClose, onSave }) => {
       } else {
         setEndTime('');
       }
-      setCategory(event.category || categories[0]?.key || 'work');
+      // Check for mapped category first, then event category, then default
+      const mappedCategory = eventCategoryMapping[eventName];
+      setCategory(mappedCategory || event.category || categories[0]?.key || 'work');
       setRepeat(event.repeat || 'none');
       setLinkedGoal(event.linkedGoal || '');
       setNotes(event.notes || '');
@@ -97,7 +112,7 @@ const EventModal = ({ event, categories, onClose, onSave }) => {
       setLinkedGoal('');
       setNotes('');
     }
-  }, [event, categories]);
+  }, [event, categories, eventCategoryMapping]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -335,12 +350,29 @@ const EventModal = ({ event, categories, onClose, onSave }) => {
                 color: '#374151'
               }}>
                 Category
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: '400',
+                  color: '#6b7280',
+                  marginLeft: '8px'
+                }}>
+                  (affects event color)
+                </span>
               </label>
               <div style={{ position: 'relative' }}>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  disabled={isOutlookEvent}
+                  onChange={(e) => {
+                    const newCategory = e.target.value;
+                    setCategory(newCategory);
+                    // Save category mapping for this event name (works for all events, including Google/Outlook)
+                    if (event && (event.summary || event.text) && newCategory) {
+                      const eventName = event.summary || event.text;
+                      if (onCategoryChange) {
+                        onCategoryChange(eventName, newCategory);
+                      }
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '12px 36px 12px 16px',
@@ -348,21 +380,39 @@ const EventModal = ({ event, categories, onClose, onSave }) => {
                     borderRadius: '8px',
                     fontSize: '16px',
                     outline: 'none',
-                    background: isOutlookEvent ? '#f3f4f6' : 'white',
+                    background: 'white',
                     boxSizing: 'border-box',
                     appearance: 'none',
-                    cursor: isOutlookEvent ? 'not-allowed' : 'pointer'
+                    cursor: 'pointer'
                   }}
-                  onFocus={(e) => !isOutlookEvent && (e.target.style.borderColor = '#3b82f6')}
-                  onBlur={(e) => !isOutlookEvent && (e.target.style.borderColor = '#e5e7eb')}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                 >
                   <option value="">Choose a category</option>
-                  {categories.map((cat) => (
+                  {Object.keys(EVENT_CATEGORY_COLORS).map((catName) => (
+                    <option key={catName} value={catName}>
+                      {catName}
+                    </option>
+                  ))}
+                  {categories.filter(cat => !Object.keys(EVENT_CATEGORY_COLORS).includes(cat.label)).map((cat) => (
                     <option key={cat.key} value={cat.key}>
                       {cat.label}
                     </option>
                   ))}
                 </select>
+                {category && EVENT_CATEGORY_COLORS[category] && (
+                  <div style={{
+                    position: 'absolute',
+                    right: '40px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '4px',
+                    background: EVENT_CATEGORY_COLORS[category],
+                    border: '1px solid rgba(0,0,0,0.1)'
+                  }} />
+                )}
                 <div style={{
                   position: 'absolute',
                   right: '12px',

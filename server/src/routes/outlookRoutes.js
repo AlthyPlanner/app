@@ -3,16 +3,18 @@ const { ConfidentialClientApplication } = require('@azure/msal-node');
 const { Client } = require('@microsoft/microsoft-graph-client');
 const router = express.Router();
 
-// MSAL configuration
-const msalConfig = {
-  auth: {
-    clientId: process.env.OUTLOOK_CLIENT_ID,
-    clientSecret: process.env.OUTLOOK_CLIENT_SECRET,
-    authority: 'https://login.microsoftonline.com/common'
-  }
-};
-
-const pca = new ConfidentialClientApplication(msalConfig);
+// Only initialize MSAL if credentials are provided
+let pca = null;
+if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
+  const msalConfig = {
+    auth: {
+      clientId: process.env.OUTLOOK_CLIENT_ID,
+      clientSecret: process.env.OUTLOOK_CLIENT_SECRET,
+      authority: 'https://login.microsoftonline.com/common'
+    }
+  };
+  pca = new ConfidentialClientApplication(msalConfig);
+}
 
 // Helper function to get Microsoft Graph client
 function getGraphClient(accessToken) {
@@ -31,6 +33,9 @@ function getGraphClient(accessToken) {
 
 // Initiate OAuth flow
 router.get('/auth/microsoft', async (req, res) => {
+  if (!pca) {
+    return res.status(503).json({ error: 'Outlook Calendar integration is not configured' });
+  }
   try {
     const authCodeUrlParameters = {
       scopes: ['User.Read', 'Calendars.Read', 'Calendars.ReadWrite'],
@@ -47,6 +52,9 @@ router.get('/auth/microsoft', async (req, res) => {
 
 // OAuth callback
 router.get('/auth/microsoft/callback', async (req, res) => {
+  if (!pca) {
+    return res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed');
+  }
   try {
     const { code } = req.query;
     
@@ -105,6 +113,9 @@ router.get('/auth/status', (req, res) => {
 
 // Get Outlook Calendar events
 router.get('/events', async (req, res) => {
+  if (!pca) {
+    return res.status(503).json({ error: 'Outlook Calendar integration is not configured' });
+  }
   try {
     if (!req.session.outlookTokens) {
       return res.status(401).json({ error: 'Not authenticated' });
@@ -154,6 +165,9 @@ router.get('/events', async (req, res) => {
 
 // Create event in Outlook Calendar
 router.post('/events', async (req, res) => {
+  if (!pca) {
+    return res.status(503).json({ error: 'Outlook Calendar integration is not configured' });
+  }
   try {
     if (!req.session.outlookTokens) {
       return res.status(401).json({ error: 'Not authenticated' });

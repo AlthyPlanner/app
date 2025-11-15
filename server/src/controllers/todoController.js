@@ -14,13 +14,13 @@ const todoController = {
   // Create a new todo
   async createTodo(req, res) {
     try {
-      const { todo, due, type, category, goal } = req.body;
+      const { todo, due, type, category, goal, priority } = req.body;
       
       if (!todo || !todo.trim()) {
         return res.status(400).json({ error: 'Todo text is required' });
       }
       
-      const newTodo = await Todo.create({ todo, due, type, category, goal });
+      const newTodo = await Todo.create({ todo, due, type, category, goal, priority });
       res.json({ message: 'Todo added successfully', todo: newTodo });
     } catch (error) {
       console.error('Error adding todo:', error);
@@ -32,13 +32,13 @@ const todoController = {
   async updateTodo(req, res) {
     try {
       const { index } = req.params;
-      const { todo, due, type, category, goal } = req.body;
+      const { todo, due, type, category, goal, priority } = req.body;
       
       if (!todo || !todo.trim()) {
         return res.status(400).json({ error: 'Todo text is required' });
       }
       
-      const updatedTodo = await Todo.update(parseInt(index), { todo, due, type, category, goal });
+      const updatedTodo = await Todo.update(parseInt(index), { todo, due, type, category, goal, priority });
       res.json({ message: 'Todo updated successfully', todo: updatedTodo });
     } catch (error) {
       if (error.message === 'Todo not found') {
@@ -85,6 +85,26 @@ const todoController = {
         return res.status(404).json({ error: 'Todo not found' });
       }
       res.status(500).json({ error: 'Failed to update task status' });
+    }
+  },
+
+  // Update priority
+  async updatePriority(req, res) {
+    try {
+      const { index } = req.params;
+      const { priority } = req.body;
+      
+      if (!['none', 'low', 'high', null].includes(priority) && priority !== '') {
+        return res.status(400).json({ error: 'Invalid priority' });
+      }
+      
+      const updatedTodo = await Todo.update(parseInt(index), { priority: priority || null });
+      res.json({ message: 'Priority updated successfully', todo: updatedTodo });
+    } catch (error) {
+      if (error.message === 'Todo not found') {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+      res.status(500).json({ error: 'Failed to update priority' });
     }
   },
 

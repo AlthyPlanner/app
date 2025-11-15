@@ -35,7 +35,8 @@ class Todo {
             type: todo.type || '',
             category: todo.category || '',
             goal: todo.goal || null,
-            status: todo.status || null
+            status: todo.status || null,
+            priority: todo.priority || null
           };
         });
       } catch (error) {
@@ -64,7 +65,8 @@ class Todo {
       type: todoData.type || '',
       category: todoData.category || '',
       goal: todoData.goal || null,
-      status: todoData.status || null
+      status: todoData.status || null,
+      priority: todoData.priority || null
     };
     todos.push(newTodo);
     await this.writeTodos(todos);
@@ -104,6 +106,9 @@ class Todo {
         // Reset completed when status is cleared
         todos[index].completed = false;
       }
+    }
+    if (todoData.priority !== undefined) {
+      todos[index].priority = todoData.priority;
     }
     
     await this.writeTodos(todos);

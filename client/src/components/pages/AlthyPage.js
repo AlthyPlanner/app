@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api';
+import { 
+  getChatHistory, 
+  saveConversation, 
+  getChatSettings, 
+  saveChatSettings,
+  deleteChatHistory,
+  cleanupOldMessages
+} from '../../utils/chatHistory';
+import { 
+  calculateDailyStatus, 
+  getWorkflowMessage 
+} from '../../utils/balanceTracker';
 
 const AlthyPage = () => {
   const navigate = useNavigate();
@@ -10,6 +22,15 @@ const AlthyPage = () => {
   const [error, setError] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+  const [showSettings, setShowSettings] = useState(false);
+  const [chatSettings, setChatSettings] = useState(getChatSettings());
+  const [dailyStatus, setDailyStatus] = useState(null);
+  const [workflowMessage, setWorkflowMessage] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [todos, setTodos] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyMessages, setHistoryMessages] = useState([]);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const messagesEndRef = React.useRef(null);
 
   useEffect(() => {
@@ -21,10 +42,84 @@ const AlthyPage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Load chat history and data on mount
+  useEffect(() => {
+    // Load chat history
+    const history = getChatHistory();
+    if (history.length > 0 && messages.length === 0) {
+      setMessages(history);
+    }
+    
+    // Clean up old messages
+    cleanupOldMessages();
+    
+    // Load events and todos for balance tracking
+    loadData();
+  }, []);
+
+  // Load history when showing history panel
+  useEffect(() => {
+    if (showHistory) {
+      const history = getChatHistory();
+      setHistoryMessages(history);
+    }
+  }, [showHistory]);
+
+  // Calculate daily status when events/todos change
+  useEffect(() => {
+    if (events.length > 0 || todos.length > 0) {
+      const today = new Date();
+      const status = calculateDailyStatus(events, todos, today);
+      setDailyStatus(status);
+      
+      const workflow = getWorkflowMessage(events, todos);
+      setWorkflowMessage(workflow);
+    }
+  }, [events, todos]);
+
+  // Load calendar events and todos
+  const loadData = async () => {
+    try {
+      const evRes = await apiFetch('/api/calendar/events');
+      const evData = await evRes.json();
+      setEvents(evData.events || []);
+      
+      const todosRes = await apiFetch('/api/todos');
+      const todosData = await todosRes.json();
+      setTodos(todosData.todos || []);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    }
+  };
+
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Close settings and history when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSettings && !event.target.closest('[data-settings-panel]') && !event.target.closest('[data-settings-button]')) {
+        setShowSettings(false);
+      }
+      if (showHistory && !event.target.closest('[data-history-panel]') && !event.target.closest('[data-history-button]')) {
+        setShowHistory(false);
+      }
+    };
+    
+    if (showSettings || showHistory) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSettings, showHistory]);
+
+  // Save messages to history whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveConversation(messages);
+    }
+  }, [messages]);
 
   const suggestedActions = [
     'Plan my week for me',
@@ -37,7 +132,11 @@ const AlthyPage = () => {
     if (!messageText.trim()) return;
     
     // Add user message to chat
-    const userMessage = { role: 'user', content: messageText };
+    const userMessage = { 
+      role: 'user', 
+      content: messageText,
+      timestamp: new Date().toISOString()
+    };
     setMessages(prev => [...prev, userMessage]);
     setPrompt('');
     setLoading(true);
@@ -52,20 +151,46 @@ const AlthyPage = () => {
       const data = await res.json();
       if (res.ok) {
         // Add AI response to chat
-        const aiMessage = { role: 'assistant', content: data.response };
+        const aiMessage = { 
+          role: 'assistant', 
+          content: data.response,
+          timestamp: new Date().toISOString()
+        };
         setMessages(prev => [...prev, aiMessage]);
       } else {
         setError(data.error || 'Error from API');
-        const errorMessage = { role: 'assistant', content: `Error: ${data.error || 'Something went wrong'}` };
+        const errorMessage = { 
+          role: 'assistant', 
+          content: `Error: ${data.error || 'Something went wrong'}`,
+          timestamp: new Date().toISOString()
+        };
         setMessages(prev => [...prev, errorMessage]);
       }
     } catch (err) {
       const errorMsg = 'Network error. Make sure the server is running on port 5001.';
       setError(errorMsg);
-      const errorMessage = { role: 'assistant', content: errorMsg };
+      const errorMessage = { 
+        role: 'assistant', 
+        content: errorMsg,
+        timestamp: new Date().toISOString()
+      };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle chat settings
+  const handleSettingsChange = (key, value) => {
+    const newSettings = { ...chatSettings, [key]: value };
+    setChatSettings(newSettings);
+    saveChatSettings(newSettings);
+  };
+
+  const handleDeleteHistory = () => {
+    if (window.confirm('Are you sure you want to delete all chat history? This cannot be undone.')) {
+      deleteChatHistory();
+      setMessages([]);
     }
   };
 
@@ -106,14 +231,93 @@ const AlthyPage = () => {
       {/* Header */}
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'flex-end', 
+        justifyContent: 'space-between', 
         alignItems: 'center', 
         padding: isMobile ? '16px' : '20px',
         position: 'sticky',
         top: 0,
         background: 'white',
-        zIndex: 10
+        zIndex: 10,
+        borderBottom: '1px solid #f0f0f0'
       }}>
+        <h2 style={{
+          margin: 0,
+          fontSize: isMobile ? '20px' : '24px',
+          fontWeight: '600',
+          color: '#1f2937'
+        }}>
+          Althy
+        </h2>
+        
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* Close Chat Button - Only show when there are messages */}
+          {messages.length > 0 && (
+            <button 
+              onClick={() => setShowCloseConfirm(true)}
+              style={{ 
+                background: 'transparent', 
+                border: 'none', 
+                cursor: 'pointer', 
+                color: '#6b7280',
+                padding: isMobile ? '8px' : '10px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                minWidth: '36px',
+                minHeight: '36px'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#f3f4f6';
+                e.target.style.color = '#374151';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#6b7280';
+              }}
+              title="Close Chat"
+            >
+              <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
+          {/* Settings Button */}
+          <button 
+            data-settings-button
+            onClick={() => setShowSettings(!showSettings)}
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              cursor: 'pointer', 
+              color: '#6b7280',
+              padding: isMobile ? '8px' : '10px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              minWidth: '36px',
+              minHeight: '36px'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#f3f4f6';
+              e.target.style.color = '#374151';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'transparent';
+              e.target.style.color = '#6b7280';
+            }}
+          >
+            <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v6m0 6v6m9-7h-6m-6 0H3"/>
+            </svg>
+          </button>
+          
+          {/* Close Button */}
         <button 
           onClick={() => navigate('/app/plan')}
           style={{ 
@@ -145,6 +349,395 @@ const AlthyPage = () => {
           </svg>
         </button>
       </div>
+      </div>
+
+      {/* Chat History Panel */}
+      {showHistory && (
+        <div 
+          data-history-panel
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? '160px' : '180px',
+            left: isMobile ? '16px' : '50%',
+            right: isMobile ? '16px' : 'auto',
+            transform: isMobile ? 'none' : 'translateX(-50%)',
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            padding: '20px',
+            zIndex: 1000,
+            width: isMobile ? 'auto' : '500px',
+            maxWidth: '90vw',
+            maxHeight: '60vh',
+            border: '1px solid #e5e7eb',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+              Chat History
+            </h3>
+            <button
+              onClick={() => setShowHistory(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            paddingRight: '8px'
+          }}>
+            {historyMessages.length === 0 ? (
+              <p style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#6b7280',
+                textAlign: 'center',
+                padding: '20px'
+              }}>
+                No chat history yet
+              </p>
+            ) : (
+              historyMessages.map((message, index) => {
+                const date = new Date(message.timestamp);
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                
+                return (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      setMessages([message]);
+                      setShowHistory(false);
+                    }}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: message.role === 'user' ? '#eff6ff' : '#f9fafb',
+                      border: `1px solid ${message.role === 'user' ? '#bfdbfe' : '#e5e7eb'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = message.role === 'user' ? '#dbeafe' : '#f3f4f6';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = message.role === 'user' ? '#eff6ff' : '#f9fafb';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      marginBottom: '4px'
+                    }}>
+                      {dateStr} at {timeStr}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#1f2937',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {message.role === 'user' ? 'You: ' : 'Althy: '}
+                      {message.content.substring(0, 100)}{message.content.length > 100 ? '...' : ''}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div 
+          data-settings-panel
+          style={{
+            position: 'fixed',
+            top: '80px',
+            right: isMobile ? '16px' : '20px',
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            padding: '20px',
+            zIndex: 1000,
+            minWidth: isMobile ? '280px' : '320px',
+            border: '1px solid #e5e7eb'
+          }}
+        >
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+            Chat Settings
+          </h3>
+          
+          {/* Auto-delete toggle */}
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px',
+            cursor: 'pointer'
+          }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                Auto-delete after 7 days
+              </div>
+              <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                Automatically delete messages older than 7 days
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={chatSettings.autoDelete}
+              onChange={(e) => handleSettingsChange('autoDelete', e.target.checked)}
+              style={{
+                width: '20px',
+                height: '20px',
+                cursor: 'pointer',
+                accentColor: '#3b82f6'
+              }}
+            />
+          </label>
+          
+          {/* Private mode toggle */}
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px',
+            cursor: 'pointer'
+          }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                Private Session Mode
+              </div>
+              <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                Don't save messages (cleared on exit)
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={chatSettings.privateMode}
+              onChange={(e) => handleSettingsChange('privateMode', e.target.checked)}
+              style={{
+                width: '20px',
+                height: '20px',
+                cursor: 'pointer',
+                accentColor: '#3b82f6'
+              }}
+            />
+          </label>
+          
+          {/* Delete history button */}
+          <button
+            onClick={handleDeleteHistory}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              background: '#fee2e2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#fecaca';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = '#fee2e2';
+            }}
+          >
+            Delete All Chat History
+          </button>
+          
+          {/* Privacy note */}
+          <p style={{
+            margin: '16px 0 0 0',
+            fontSize: '12px',
+            color: '#6b7280',
+            lineHeight: '1.5'
+          }}>
+            Your conversations are private to you. You can delete history or disable saving anytime.
+          </p>
+        </div>
+      )}
+
+      {/* Workflow Message Banner */}
+      {workflowMessage && messages.length === 0 && (
+        <div style={{
+          margin: '16px',
+          padding: '16px',
+          background: '#eff6ff',
+          borderRadius: '12px',
+          border: '1px solid #bfdbfe',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <p style={{
+            margin: 0,
+            fontSize: '14px',
+            color: '#1e40af',
+            fontWeight: '500'
+          }}>
+            {workflowMessage.message}
+          </p>
+          {workflowMessage.showButton && (
+            <button
+              onClick={() => sendMessage('Plan my day for me')}
+              style={{
+                padding: '10px 16px',
+                background: '#3b82f6',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                alignSelf: 'flex-start',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#2563eb';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = '#3b82f6';
+              }}
+            >
+              {workflowMessage.action}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Close Chat Confirmation Modal */}
+      {showCloseConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '16px'
+          }}
+          onClick={() => setShowCloseConfirm(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937'
+            }}>
+              Close Chat?
+            </h3>
+            <p style={{
+              margin: '0 0 24px 0',
+              fontSize: '14px',
+              color: '#6b7280',
+              lineHeight: '1.5'
+            }}>
+              Your messages are saved in history. You can access them anytime using the clock icon.
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setShowCloseConfirm(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'white';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setShowCloseConfirm(false);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = '#2563eb';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = '#3b82f6';
+                }}
+              >
+                Close Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div style={{ 
@@ -353,23 +946,37 @@ const AlthyPage = () => {
         }}>
           <button
             type="button"
+            data-history-button
+            onClick={() => setShowHistory(!showHistory)}
+            title="Chat History"
             style={{
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
               padding: isMobile ? '6px' : '8px',
-              color: '#6b7280',
+              color: showHistory ? '#3b82f6' : '#6b7280',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
               minWidth: isMobile ? '36px' : '40px',
-              minHeight: isMobile ? '36px' : '40px'
+              minHeight: isMobile ? '36px' : '40px',
+              transition: 'color 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              if (!showHistory) {
+                e.currentTarget.style.color = '#374151';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!showHistory) {
+                e.currentTarget.style.color = '#6b7280';
+              }
             }}
           >
-            <svg width={isMobile ? "18" : "20"} height={isMobile ? "18" : "20"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
+            <svg width={isMobile ? "18" : "20"} height={isMobile ? "18" : "20"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
             </svg>
           </button>
           <input

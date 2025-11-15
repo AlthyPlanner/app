@@ -4,7 +4,7 @@
     "completed": false,
     "due": "2025-11-21T16:00:00.000Z",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
     "status": "forward"
   },
@@ -13,7 +13,7 @@
     "completed": true,
     "due": "2025-11-13T16:00:00",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
     "status": "complete"
   },
@@ -22,43 +22,43 @@
     "completed": true,
     "due": "2025-11-14T10:00:00",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
     "status": "complete"
   },
   {
     "text": "Team standup meeting",
     "completed": false,
-    "due": "2025-11-14T14:00:00",
+    "due": "2025-11-21T16:00:00.000Z",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
-    "status": "in_progress"
+    "status": "forward"
   },
   {
     "text": "Gym workout",
-    "completed": false,
+    "completed": true,
     "due": "2025-11-15T16:00:00.000Z",
     "type": "Fitness",
-    "category": "",
-    "goal": null,
-    "status": "in_progress"
+    "category": "fitness",
+    "goal": "3",
+    "status": "complete"
   },
   {
     "text": "Finish reading chapter 5",
     "completed": false,
-    "due": "2025-11-15T09:00:00",
+    "due": "2025-11-21T16:00:00.000Z",
     "type": "Study",
-    "category": "",
-    "goal": null,
-    "status": null
+    "category": "study",
+    "goal": "1",
+    "status": "forward"
   },
   {
     "text": "Prepare presentation slides",
     "completed": true,
     "due": "2025-11-16T16:00:00",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
     "status": null
   },
@@ -67,8 +67,8 @@
     "completed": true,
     "due": "2025-11-17T10:00:00",
     "type": "Study",
-    "category": "",
-    "goal": null,
+    "category": "study",
+    "goal": "1",
     "status": null
   },
   {
@@ -76,7 +76,7 @@
     "completed": false,
     "due": "2025-11-18T11:00:00",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
     "status": null
   },
@@ -85,7 +85,7 @@
     "completed": false,
     "due": "2025-11-25T17:00:00",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
     "status": null
   },
@@ -94,7 +94,7 @@
     "completed": false,
     "due": "2025-12-01T12:00:00",
     "type": "Personal",
-    "category": "",
+    "category": "personal",
     "goal": null,
     "status": null
   },
@@ -103,8 +103,8 @@
     "completed": false,
     "due": "2025-12-15T23:59:59",
     "type": "Study",
-    "category": "",
-    "goal": null,
+    "category": "study",
+    "goal": "1",
     "status": null
   },
   {
@@ -112,8 +112,170 @@
     "completed": false,
     "due": "2025-12-20T09:00:00",
     "type": "Work",
-    "category": "",
+    "category": "work",
     "goal": null,
+    "status": null
+  },
+  {
+    "text": "Morning yoga session",
+    "completed": false,
+    "due": "2025-11-20T07:00:00.000Z",
+    "type": "Fitness",
+    "category": "fitness",
+    "goal": "3",
+    "status": null
+  },
+  {
+    "text": "Call dentist for appointment",
+    "completed": false,
+    "due": "2025-11-19T14:00:00.000Z",
+    "type": "Personal",
+    "category": "personal",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Read 'Atomic Habits' chapter 3",
+    "completed": false,
+    "due": "2025-11-20T20:00:00.000Z",
+    "type": "Study",
+    "category": "study",
+    "goal": "2",
+    "status": null
+  },
+  {
+    "text": "Design new logo concepts",
+    "completed": false,
+    "due": "2025-11-22T15:00:00.000Z",
+    "type": "Work",
+    "category": "work",
+    "goal": null,
+    "status": "in_progress"
+  },
+  {
+    "text": "Grocery shopping",
+    "completed": true,
+    "due": "2025-11-19T18:00:00.000Z",
+    "type": "Personal",
+    "category": "personal",
+    "goal": null,
+    "status": "complete"
+  },
+  {
+    "text": "Practice piano for 30 minutes",
+    "completed": false,
+    "due": "2025-11-20T19:00:00.000Z",
+    "type": "Personal",
+    "category": "leisure",
+    "goal": "4",
+    "status": null
+  },
+  {
+    "text": "Write blog post about productivity",
+    "completed": false,
+    "due": "2025-11-23T12:00:00.000Z",
+    "type": "Work",
+    "category": "work",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "5K run training",
+    "completed": false,
+    "due": "2025-11-21T06:00:00.000Z",
+    "type": "Fitness",
+    "category": "fitness",
+    "goal": "3",
+    "status": null
+  },
+  {
+    "text": "Review code pull requests",
+    "completed": false,
+    "due": "2025-11-20T10:00:00.000Z",
+    "type": "Work",
+    "category": "work",
+    "goal": null,
+    "status": "in_progress"
+  },
+  {
+    "text": "Watch Spanish movie with subtitles",
+    "completed": false,
+    "due": "2025-11-21T20:00:00.000Z",
+    "type": "Study",
+    "category": "study",
+    "goal": "1",
+    "status": null
+  },
+  {
+    "text": "Meal prep for the week",
+    "completed": false,
+    "due": "2025-11-19T16:00:00.000Z",
+    "type": "Personal",
+    "category": "personal",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Attend networking event",
+    "completed": false,
+    "due": "2025-11-22T18:00:00.000Z",
+    "type": "Work",
+    "category": "work",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Complete online course module 4",
+    "completed": false,
+    "due": "2025-11-24T14:00:00.000Z",
+    "type": "Study",
+    "category": "study",
+    "goal": "1",
+    "status": null
+  },
+  {
+    "text": "Schedule doctor's appointment",
+    "completed": true,
+    "due": "2025-11-18T11:00:00.000Z",
+    "type": "Personal",
+    "category": "health",
+    "goal": null,
+    "status": "complete"
+  },
+  {
+    "text": "Update resume",
+    "completed": false,
+    "due": "2025-11-26T17:00:00.000Z",
+    "type": "Work",
+    "category": "work",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Meditation session",
+    "completed": false,
+    "due": "2025-11-20T08:00:00.000Z",
+    "type": "Personal",
+    "category": "rest",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Fix bug in authentication module",
+    "completed": false,
+    "due": "2025-11-21T13:00:00.000Z",
+    "type": "Work",
+    "category": "work",
+    "goal": null,
+    "status": "forward"
+  },
+  {
+    "text": "Practice guitar chords",
+    "completed": false,
+    "due": "2025-11-22T19:00:00.000Z",
+    "type": "Personal",
+    "category": "leisure",
+    "goal": "4",
     "status": null
   }
 ]
