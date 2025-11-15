@@ -121,16 +121,8 @@ const TasksPage = () => {
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {/* Circular arrow pointing counter-clockwise (left) - forms outer boundary */}
-              <path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 9 9"/>
-              <path d="M3 3v5h5"/>
-              {/* Clock face inside - centered circle */}
-              <circle cx="12" cy="12" r="5" fill="none"/>
-              {/* Clock hands pointing to bottom-right (around 4:30-5:30) */}
-              {/* Hour hand (shorter, thicker) */}
-              <line x1="12" y1="12" x2="12" y2="9" strokeWidth="2.5" strokeLinecap="round"/>
-              {/* Minute hand (longer, thinner) */}
-              <line x1="12" y1="12" x2="14.5" y2="14.5" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
             </svg>
           </button>
         </div>

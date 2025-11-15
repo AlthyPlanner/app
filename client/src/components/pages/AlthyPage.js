@@ -44,10 +44,17 @@ const AlthyPage = () => {
 
   // Load chat history and data on mount
   useEffect(() => {
-    // Load chat history
-    const history = getChatHistory();
-    if (history.length > 0 && messages.length === 0) {
-      setMessages(history);
+    // Check if chat was closed - if so, don't auto-load history
+    const chatWasClosed = localStorage.getItem('althy_chat_closed');
+    if (chatWasClosed === 'true') {
+      // Chat was closed, start with empty messages (main screen)
+      setMessages([]);
+    } else {
+      // Load chat history only if chat wasn't closed
+      const history = getChatHistory();
+      if (history.length > 0 && messages.length === 0) {
+        setMessages(history);
+      }
     }
     
     // Clean up old messages
@@ -130,6 +137,9 @@ const AlthyPage = () => {
 
   const sendMessage = async (messageText) => {
     if (!messageText.trim()) return;
+    
+    // Clear the chat closed flag when starting a new message
+    localStorage.removeItem('althy_chat_closed');
     
     // Add user message to chat
     const userMessage = { 
@@ -231,59 +241,53 @@ const AlthyPage = () => {
       {/* Header */}
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'space-between', 
+        justifyContent: 'flex-end', 
         alignItems: 'center', 
         padding: isMobile ? '16px' : '20px',
         position: 'sticky',
         top: 0,
         background: 'white',
-        zIndex: 10,
-        borderBottom: '1px solid #f0f0f0'
+        zIndex: 10
       }}>
-        <h2 style={{
-          margin: 0,
-          fontSize: isMobile ? '20px' : '24px',
-          fontWeight: '600',
-          color: '#1f2937'
-        }}>
-          Althy
-        </h2>
-        
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* Close Chat Button - Only show when there are messages */}
-          {messages.length > 0 && (
-            <button 
-              onClick={() => setShowCloseConfirm(true)}
-              style={{ 
-                background: 'transparent', 
-                border: 'none', 
-                cursor: 'pointer', 
-                color: '#6b7280',
-                padding: isMobile ? '8px' : '10px',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                minWidth: '36px',
-                minHeight: '36px'
-              }}
-              onMouseOver={(e) => {
+          {/* Chat History Button (Clock Icon) */}
+          <button 
+            data-history-button
+            onClick={() => setShowHistory(!showHistory)}
+            title="Chat History"
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              cursor: 'pointer', 
+              color: showHistory ? '#3b82f6' : '#6b7280',
+              padding: isMobile ? '8px' : '10px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              minWidth: '36px',
+              minHeight: '36px'
+            }}
+            onMouseOver={(e) => {
+              if (!showHistory) {
                 e.target.style.background = '#f3f4f6';
                 e.target.style.color = '#374151';
-              }}
-              onMouseOut={(e) => {
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!showHistory) {
                 e.target.style.background = 'transparent';
                 e.target.style.color = '#6b7280';
-              }}
-              title="Close Chat"
-            >
-              <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          )}
+              }
+            }}
+          >
+            <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </button>
+          
           {/* Settings Button */}
           <button 
             data-settings-button
@@ -311,44 +315,12 @@ const AlthyPage = () => {
               e.target.style.color = '#6b7280';
             }}
           >
-            <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 1v6m0 6v6m9-7h-6m-6 0H3"/>
+            <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.39 1.26 1 1.51.21.09.44.13.67.13H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
             </svg>
           </button>
-          
-          {/* Close Button */}
-        <button 
-          onClick={() => navigate('/app/plan')}
-          style={{ 
-            background: 'transparent', 
-            border: 'none', 
-            cursor: 'pointer', 
-            color: '#6b7280',
-            padding: isMobile ? '8px' : '10px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            minWidth: '36px',
-            minHeight: '36px'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.background = '#f3f4f6';
-            e.target.style.color = '#374151';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'transparent';
-            e.target.style.color = '#6b7280';
-          }}
-        >
-          <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </button>
-      </div>
+        </div>
       </div>
 
       {/* Chat History Panel */}
@@ -431,8 +403,12 @@ const AlthyPage = () => {
                   <div
                     key={index}
                     onClick={() => {
-                      setMessages([message]);
+                      // Load full conversation history when clicking on a history item
+                      const fullHistory = getChatHistory();
+                      setMessages(fullHistory);
                       setShowHistory(false);
+                      // Clear the chat closed flag since user is resuming a chat
+                      localStorage.removeItem('althy_chat_closed');
                     }}
                     style={{
                       padding: '12px',
@@ -493,9 +469,43 @@ const AlthyPage = () => {
             border: '1px solid #e5e7eb'
           }}
         >
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
-            Chat Settings
-          </h3>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+              Chat Settings
+            </h3>
+            <button
+              onClick={() => setShowSettings(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#f3f4f6';
+                e.target.style.color = '#374151';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#6b7280';
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
           
           {/* Auto-delete toggle */}
           <label style={{
@@ -712,6 +722,8 @@ const AlthyPage = () => {
               <button
                 onClick={() => {
                   setMessages([]);
+                  // Mark chat as closed so it won't auto-load when returning to page
+                  localStorage.setItem('althy_chat_closed', 'true');
                   setShowCloseConfirm(false);
                 }}
                 style={{
@@ -944,41 +956,6 @@ const AlthyPage = () => {
           maxWidth: isMobile ? '100%' : '600px',
           margin: '0 auto'
         }}>
-          <button
-            type="button"
-            data-history-button
-            onClick={() => setShowHistory(!showHistory)}
-            title="Chat History"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: isMobile ? '6px' : '8px',
-              color: showHistory ? '#3b82f6' : '#6b7280',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              minWidth: isMobile ? '36px' : '40px',
-              minHeight: isMobile ? '36px' : '40px',
-              transition: 'color 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              if (!showHistory) {
-                e.currentTarget.style.color = '#374151';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!showHistory) {
-                e.currentTarget.style.color = '#6b7280';
-              }
-            }}
-          >
-            <svg width={isMobile ? "18" : "20"} height={isMobile ? "18" : "20"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-          </button>
           <input
             type="text"
             value={prompt}
