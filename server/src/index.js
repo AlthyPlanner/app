@@ -39,10 +39,21 @@ app.use(passport.session());
 // Routes
 app.use('/api/todos', todoRoutes);
 
-// Mount OpenAI routes only if API key is present
+// Mount chat routes (handles actions + AI responses)
 if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
-  const openaiRoutes = require('./routes/openaiRoutes');
-  app.use('/api/openai', openaiRoutes);
+  const chatRoutes = require('./routes/chatRoutes');
+  app.use('/api/chat', chatRoutes);
+  // Keep /api/openai for backward compatibility
+  app.use('/api/openai', chatRoutes);
+} else {
+  // Provide a helpful error message if OpenAI is not configured
+  const errorHandler = (req, res) => {
+    res.status(503).json({ 
+      error: 'OpenAI API is not configured. Please set OPENAI_API_KEY environment variable.' 
+    });
+  };
+  app.post('/api/chat', errorHandler);
+  app.post('/api/openai', errorHandler);
 }
 
 app.use('/api/types', typeRoutes);
@@ -58,6 +69,25 @@ app.get('/', (req, res) => {
   res.send('Welcome to Todo Planner API!');
 });
 
-app.listen(PORT, () => {
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Please kill the process using that port.`);
+  }
 });

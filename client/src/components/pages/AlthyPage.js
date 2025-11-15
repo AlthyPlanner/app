@@ -153,35 +153,119 @@ const AlthyPage = () => {
     setError('');
     
     try {
-      const res = await apiFetch('/api/openai', {
+      // Prepare chat history (exclude the current message we just added)
+      const chatHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Prepare user context
+      const userContext = {
+        todos: todos.map(todo => ({
+          text: todo.text,
+          completed: todo.completed,
+          due: todo.due,
+          priority: todo.priority,
+          category: todo.category
+        })),
+        events: events.slice(0, 10).map(event => ({ // Limit to recent 10 events
+          summary: event.summary || event.text,
+          start: event.start,
+          end: event.end,
+          category: event.category
+        }))
+      };
+
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: messageText }),
+        body: JSON.stringify({ 
+          prompt: messageText,
+          history: chatHistory,
+          context: userContext
+        }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        // Add AI response to chat
-        const aiMessage = { 
-          role: 'assistant', 
-          content: data.response,
-          timestamp: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      } else {
-        setError(data.error || 'Error from API');
+
+      // Check if response is empty or failed
+      if (!res || !res.ok) {
+        let errorMsg = 'Unable to connect to the server.';
+        try {
+          const errorData = await res.json();
+          errorMsg = errorData.error || `Server error (${res.status})`;
+        } catch (e) {
+          if (res.status === 0 || !res.status) {
+            errorMsg = 'Network error. Make sure the server is running on port 5001.';
+          } else {
+            errorMsg = `Server error (${res.status}). Please try again.`;
+          }
+        }
+        
+        setError(errorMsg);
         const errorMessage = { 
           role: 'assistant', 
-          content: `Error: ${data.error || 'Something went wrong'}`,
+          content: `Error: ${errorMsg}`,
           timestamp: new Date().toISOString()
         };
         setMessages(prev => [...prev, errorMessage]);
+        return;
       }
+
+      // Parse response
+      let data;
+      try {
+        const text = await res.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Empty response from server');
+        }
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        console.error('Error parsing response:', parseErr);
+        const errorMsg = 'Received invalid response from server. Please try again.';
+        setError(errorMsg);
+        const errorMessage = { 
+          role: 'assistant', 
+          content: `Error: ${errorMsg}`,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        return;
+      }
+
+      // Check if backend attempted to create a task or event
+      if (data.action) {
+        // Add action message (success or clarification)
+        const actionMessage = {
+          role: 'assistant',
+          content: data.action.message,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, actionMessage]);
+        
+        // Reload data if task/event was successfully created
+        if (data.action.success) {
+          await loadData();
+        }
+      }
+      
+      // Add AI response to chat
+      const aiMessage = { 
+        role: 'assistant', 
+        content: data.response || 'I apologize, but I couldn\'t generate a response. Please try again.',
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, aiMessage]);
     } catch (err) {
-      const errorMsg = 'Network error. Make sure the server is running on port 5001.';
+      console.error('Error sending message:', err);
+      let errorMsg = 'Network error. Make sure the server is running on port 5001.';
+      if (err.message) {
+        errorMsg = err.message.includes('Failed to fetch') || err.message.includes('ERR_EMPTY_RESPONSE')
+          ? 'Unable to connect to the server. Please make sure the server is running on port 5001.'
+          : err.message;
+      }
       setError(errorMsg);
       const errorMessage = { 
         role: 'assistant', 
-        content: errorMsg,
+        content: `Error: ${errorMsg}`,
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -287,6 +371,41 @@ const AlthyPage = () => {
               <polyline points="12 6 12 12 16 14"/>
             </svg>
           </button>
+          
+          {/* Close Chat Button - Only show when there are messages */}
+          {messages.length > 0 && (
+            <button 
+              onClick={() => setShowCloseConfirm(true)}
+              style={{ 
+                background: 'transparent', 
+                border: 'none', 
+                cursor: 'pointer', 
+                color: '#6b7280',
+                padding: isMobile ? '8px' : '10px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                minWidth: '36px',
+                minHeight: '36px'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#f3f4f6';
+                e.target.style.color = '#374151';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#6b7280';
+              }}
+              title="Close Chat"
+            >
+              <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
           
           {/* Settings Button */}
           <button 

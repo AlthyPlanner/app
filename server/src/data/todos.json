@@ -6,7 +6,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "forward"
+    "status": "forward",
+    "priority": null
   },
   {
     "text": "Update project documentation",
@@ -15,7 +16,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "complete"
+    "status": "complete",
+    "priority": null
   },
   {
     "text": "Review project proposal",
@@ -24,7 +26,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "complete"
+    "status": "complete",
+    "priority": null
   },
   {
     "text": "Team standup meeting",
@@ -33,7 +36,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "forward"
+    "status": "forward",
+    "priority": null
   },
   {
     "text": "Gym workout",
@@ -42,7 +46,8 @@
     "type": "Fitness",
     "category": "fitness",
     "goal": "3",
-    "status": "complete"
+    "status": "complete",
+    "priority": null
   },
   {
     "text": "Finish reading chapter 5",
@@ -51,7 +56,8 @@
     "type": "Study",
     "category": "study",
     "goal": "1",
-    "status": "forward"
+    "status": "forward",
+    "priority": null
   },
   {
     "text": "Prepare presentation slides",
@@ -60,7 +66,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Spanish lesson practice",
@@ -69,7 +76,8 @@
     "type": "Study",
     "category": "study",
     "goal": "1",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Weekly team review",
@@ -78,7 +86,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Submit quarterly report",
@@ -87,7 +96,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Plan vacation itinerary",
@@ -96,7 +106,8 @@
     "type": "Personal",
     "category": "personal",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Complete certification course",
@@ -105,7 +116,8 @@
     "type": "Study",
     "category": "study",
     "goal": "1",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Annual performance review",
@@ -114,7 +126,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Morning yoga session",
@@ -123,7 +136,8 @@
     "type": "Fitness",
     "category": "fitness",
     "goal": "3",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Call dentist for appointment",
@@ -132,7 +146,8 @@
     "type": "Personal",
     "category": "personal",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Read 'Atomic Habits' chapter 3",
@@ -141,7 +156,8 @@
     "type": "Study",
     "category": "study",
     "goal": "2",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Design new logo concepts",
@@ -150,7 +166,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "in_progress"
+    "status": "in_progress",
+    "priority": null
   },
   {
     "text": "Grocery shopping",
@@ -159,7 +176,8 @@
     "type": "Personal",
     "category": "personal",
     "goal": null,
-    "status": "complete"
+    "status": "complete",
+    "priority": null
   },
   {
     "text": "Practice piano for 30 minutes",
@@ -168,7 +186,8 @@
     "type": "Personal",
     "category": "leisure",
     "goal": "4",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Write blog post about productivity",
@@ -177,7 +196,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "5K run training",
@@ -186,7 +206,8 @@
     "type": "Fitness",
     "category": "fitness",
     "goal": "3",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Review code pull requests",
@@ -195,7 +216,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "in_progress"
+    "status": "in_progress",
+    "priority": null
   },
   {
     "text": "Watch Spanish movie with subtitles",
@@ -204,7 +226,8 @@
     "type": "Study",
     "category": "study",
     "goal": "1",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Meal prep for the week",
@@ -213,7 +236,8 @@
     "type": "Personal",
     "category": "personal",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Attend networking event",
@@ -222,7 +246,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Complete online course module 4",
@@ -231,7 +256,8 @@
     "type": "Study",
     "category": "study",
     "goal": "1",
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Schedule doctor's appointment",
@@ -240,7 +266,8 @@
     "type": "Personal",
     "category": "health",
     "goal": null,
-    "status": "complete"
+    "status": "complete",
+    "priority": null
   },
   {
     "text": "Update resume",
@@ -249,7 +276,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Meditation session",
@@ -258,7 +286,8 @@
     "type": "Personal",
     "category": "rest",
     "goal": null,
-    "status": null
+    "status": null,
+    "priority": null
   },
   {
     "text": "Fix bug in authentication module",
@@ -267,7 +296,8 @@
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": "forward"
+    "status": "forward",
+    "priority": null
   },
   {
     "text": "Practice guitar chords",
@@ -276,6 +306,137 @@
     "type": "Personal",
     "category": "leisure",
     "goal": "4",
-    "status": null
+    "status": null,
+    "priority": null
+  },
+  {
+    "text": "running 1 mile",
+    "completed": false,
+    "due": "2022-12-15",
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "running 1 mile",
+    "completed": false,
+    "due": "2022-03-10",
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "running 1 mile",
+    "completed": false,
+    "due": "2022-01-26",
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "Add a task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "adding a task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "add a task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "add task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "run 1 mile",
+    "completed": false,
+    "due": "null",
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "Add task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "add task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "add task",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "running 1 mile",
+    "completed": false,
+    "due": "2024-12-15",
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "running 1 mile",
+    "completed": false,
+    "due": "2022-11-09",
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
   }
 ]
