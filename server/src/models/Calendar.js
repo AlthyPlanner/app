@@ -4,6 +4,7 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const CATEGORIES_FILE = path.join(DATA_DIR, 'calendarCategories.json');
+const SHARED_CALENDARS_FILE = path.join(DATA_DIR, 'sharedCalendars.json');
 
 async function ensureFiles() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -17,6 +18,7 @@ async function ensureFiles() {
     ];
     await fs.writeFile(CATEGORIES_FILE, JSON.stringify(defaults, null, 2));
   }
+  try { await fs.access(SHARED_CALENDARS_FILE); } catch (e) { await fs.writeFile(SHARED_CALENDARS_FILE, JSON.stringify([], null, 2)); }
 }
 
 async function readJson(file) {
@@ -78,6 +80,34 @@ class CalendarModel {
   static async saveCategories(categories) {
     await writeJson(CATEGORIES_FILE, categories);
     return categories;
+  }
+
+  static async listSharedCalendars() {
+    return await readJson(SHARED_CALENDARS_FILE);
+  }
+
+  static async addSharedCalendar(calendar) {
+    const sharedCalendars = await this.listSharedCalendars();
+    const newCalendar = {
+      id: generateId(),
+      name: calendar.name || '',
+      email: calendar.email || '',
+      userId: calendar.userId || '',
+      color: calendar.color || '#3b82f6',
+      createdAt: new Date().toISOString()
+    };
+    sharedCalendars.push(newCalendar);
+    await writeJson(SHARED_CALENDARS_FILE, sharedCalendars);
+    return newCalendar;
+  }
+
+  static async removeSharedCalendar(id) {
+    const sharedCalendars = await this.listSharedCalendars();
+    const idx = sharedCalendars.findIndex(c => c.id === id);
+    if (idx === -1) throw new Error('Shared calendar not found');
+    sharedCalendars.splice(idx, 1);
+    await writeJson(SHARED_CALENDARS_FILE, sharedCalendars);
+    return { message: 'Removed' };
   }
 }
 

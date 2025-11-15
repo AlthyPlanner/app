@@ -1,20 +1,119 @@
 [
   {
-    "text": "Project Milestone 2",
+    "text": "Follow up on client email",
     "completed": false,
-    "due": "2025-07-06",
-    "type": "Reinforcement Learning"
+    "due": "2025-11-21T16:00:00.000Z",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": "forward"
   },
   {
-    "text": "Read SecondMe Paper 2",
-    "completed": false,
-    "due": "2025-07-07",
-    "type": "Note-taking Project"
+    "text": "Update project documentation",
+    "completed": true,
+    "due": "2025-11-13T16:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": "complete"
   },
   {
-    "text": "111",
+    "text": "Review project proposal",
+    "completed": true,
+    "due": "2025-11-14T10:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": "complete"
+  },
+  {
+    "text": "Team standup meeting",
     "completed": false,
-    "due": "2025-10-01",
-    "type": "Work"
+    "due": "2025-11-14T14:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": "in_progress"
+  },
+  {
+    "text": "Gym workout",
+    "completed": false,
+    "due": "2025-11-15T16:00:00.000Z",
+    "type": "Fitness",
+    "category": "",
+    "goal": null,
+    "status": "in_progress"
+  },
+  {
+    "text": "Finish reading chapter 5",
+    "completed": false,
+    "due": "2025-11-15T09:00:00",
+    "type": "Study",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Prepare presentation slides",
+    "completed": true,
+    "due": "2025-11-16T16:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Spanish lesson practice",
+    "completed": true,
+    "due": "2025-11-17T10:00:00",
+    "type": "Study",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Weekly team review",
+    "completed": false,
+    "due": "2025-11-18T11:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Submit quarterly report",
+    "completed": false,
+    "due": "2025-11-25T17:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Plan vacation itinerary",
+    "completed": false,
+    "due": "2025-12-01T12:00:00",
+    "type": "Personal",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Complete certification course",
+    "completed": false,
+    "due": "2025-12-15T23:59:59",
+    "type": "Study",
+    "category": "",
+    "goal": null,
+    "status": null
+  },
+  {
+    "text": "Annual performance review",
+    "completed": false,
+    "due": "2025-12-20T09:00:00",
+    "type": "Work",
+    "category": "",
+    "goal": null,
+    "status": null
   }
 ]

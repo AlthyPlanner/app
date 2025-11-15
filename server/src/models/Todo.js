@@ -32,7 +32,10 @@ class Todo {
             text: todo.text || '',
             completed: todo.completed || false,
             due: todo.due || null,
-            type: todo.type || ''
+            type: todo.type || '',
+            category: todo.category || '',
+            goal: todo.goal || null,
+            status: todo.status || null
           };
         });
       } catch (error) {
@@ -58,7 +61,10 @@ class Todo {
       text: todoData.todo.trim(),
       completed: false,
       due: todoData.due || null,
-      type: todoData.type || ''
+      type: todoData.type || '',
+      category: todoData.category || '',
+      goal: todoData.goal || null,
+      status: todoData.status || null
     };
     todos.push(newTodo);
     await this.writeTodos(todos);
@@ -71,12 +77,33 @@ class Todo {
       throw new Error('Todo not found');
     }
     
-    todos[index].text = todoData.todo.trim();
+    // Only update text if todo field is provided
+    if (todoData.todo !== undefined) {
+      todos[index].text = todoData.todo.trim();
+    }
     if (todoData.due !== undefined) {
       todos[index].due = todoData.due;
     }
     if (todoData.type !== undefined) {
       todos[index].type = todoData.type;
+    }
+    if (todoData.category !== undefined) {
+      todos[index].category = todoData.category;
+    }
+    if (todoData.goal !== undefined) {
+      todos[index].goal = todoData.goal;
+    }
+    if (todoData.status !== undefined) {
+      todos[index].status = todoData.status;
+      // Update completed based on status
+      if (todoData.status === 'complete') {
+        todos[index].completed = true;
+      } else if (todoData.status === 'in_progress' || todoData.status === 'forward') {
+        todos[index].completed = false;
+      } else if (todoData.status === null || todoData.status === '') {
+        // Reset completed when status is cleared
+        todos[index].completed = false;
+      }
     }
     
     await this.writeTodos(todos);

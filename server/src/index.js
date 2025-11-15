@@ -8,6 +8,7 @@ const passport = require('passport');
 const todoRoutes = require('./routes/todoRoutes');
 const typeRoutes = require('./routes/typeRoutes');
 const googleRoutes = require('./routes/googleRoutes');
+const outlookRoutes = require('./routes/outlookRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
@@ -46,6 +47,7 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
 
 app.use('/api/types', typeRoutes);
 app.use('/api/google', googleRoutes);
+app.use('/api/outlook', outlookRoutes);
 app.use('/api/calendar', calendarRoutes);
 
 // Basic route

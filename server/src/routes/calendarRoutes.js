@@ -65,6 +65,38 @@ router.put('/categories', async (req, res) => {
   }
 });
 
+// Shared Calendars
+router.get('/shared', async (req, res) => {
+  try {
+    const sharedCalendars = await Calendar.listSharedCalendars();
+    res.json({ sharedCalendars });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read shared calendars' });
+  }
+});
+
+router.post('/shared', async (req, res) => {
+  try {
+    const { name, email, userId, color } = req.body;
+    if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+    const calendar = await Calendar.addSharedCalendar({ name, email, userId, color });
+    res.json({ calendar });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add shared calendar' });
+  }
+});
+
+router.delete('/shared/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const r = await Calendar.removeSharedCalendar(id);
+    res.json(r);
+  } catch (e) {
+    if (e.message === 'Shared calendar not found') return res.status(404).json({ error: 'Not found' });
+    res.status(500).json({ error: 'Failed to remove shared calendar' });
+  }
+});
+
 module.exports = router;
 
 
