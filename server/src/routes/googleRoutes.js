@@ -101,7 +101,7 @@ router.get('/events', async (req, res) => {
       orderBy: 'startTime',
     });
 
-    const events = response.data.items.map(event => ({
+    const googleEvents = response.data.items.map(event => ({
       id: event.id,
       summary: event.summary || 'No Title',
       start: event.start.dateTime || event.start.date,
@@ -111,7 +111,17 @@ router.get('/events', async (req, res) => {
       source: 'google'
     }));
 
-    res.json({ events });
+    // Sync Google events into events.json (source of truth)
+    const Calendar = require('../models/Calendar');
+    
+    // Step 1: Sync Google events (merge/add/update) - no categorization
+    const syncedEvents = await Calendar.syncGoogleEvents(googleEvents);
+    
+    // Step 2: Categorize events that don't have categories and save to file
+    const categorizedEvents = await Calendar.categorizeEvents(syncedEvents, true);
+
+    // Return all events (including local ones) with categories
+    res.json({ events: categorizedEvents });
   } catch (error) {
     console.error('Error fetching Google Calendar events:', error);
     res.status(500).json({ error: 'Failed to fetch Google Calendar events' });
@@ -176,13 +186,33 @@ router.post('/events', async (req, res) => {
 });
 
 // Logout
-router.post('/auth/logout', (req, res) => {
+router.post('/auth/logout', async (req, res) => {
+  try {
+    // Remove Google Calendar events from events.json
+    const Calendar = require('../models/Calendar');
+    const removedCount = await Calendar.removeGoogleEvents();
+    
+    // Logout user session
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Logout failed' });
+      }
+      res.json({ 
+        success: true, 
+        message: 'Logged out successfully',
+        removedEvents: removedCount
+      });
+    });
+  } catch (error) {
+    console.error('Error during Google Calendar logout:', error);
+    // Still try to logout even if event removal fails
   req.logout((err) => {
     if (err) {
       return res.status(500).json({ error: 'Logout failed' });
     }
     res.json({ success: true, message: 'Logged out successfully' });
   });
+  }
 });
 
 module.exports = router;

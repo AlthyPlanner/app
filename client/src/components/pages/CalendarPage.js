@@ -5,17 +5,7 @@ import EventModal from '../modals/EventModal';
 import { calculateDailyStatus } from '../../utils/balanceTracker';
 import './CalendarPage.css';
 
-// Event category color palette
-const EVENT_CATEGORY_COLORS = {
-  'Work': '#6A8FA6',        // Steel Blue
-  'Study': '#E6E6FA',       // Soft Lavender
-  'Personal': '#FFE4D1',    // Peach Tint
-  'Leisure': '#C8F5E1',    // Mint Green
-  'Fitness': '#7CCAC1',     // Fresh Blue-Green
-  'Health': '#FFB7A8',      // Soft Coral
-  'Travel': '#F6E4A6',      // Light Golden Sand
-  'Rest': '#DDEFF5'         // Misty Light Blue
-};
+// Event category color palette - will be built from categories loaded from API
 
 // Event category mapping utilities
 const getEventCategoryMapping = () => {
@@ -100,6 +90,8 @@ const CalendarPage = () => {
   const [dailyStatus, setDailyStatus] = useState(null);
   const [showStatusMessage, setShowStatusMessage] = useState(true);
   const [eventCategoryMapping, setEventCategoryMapping] = useState(getEventCategoryMapping());
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
 
   useEffect(() => {
     const handleResize = () => {
@@ -127,13 +119,21 @@ const CalendarPage = () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auth') === 'success') {
       checkGoogleAuth();
+      setNotificationMessage('Successfully connected to Google Calendar!');
+      setShowNotification(true);
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
+      // Auto-hide notification after 3 seconds
+      setTimeout(() => setShowNotification(false), 3000);
     }
     if (urlParams.get('outlook_auth') === 'success') {
       checkOutlookAuth();
+      setNotificationMessage('Successfully connected to Outlook Calendar!');
+      setShowNotification(true);
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
+      // Auto-hide notification after 3 seconds
+      setTimeout(() => setShowNotification(false), 3000);
     }
     if (urlParams.get('error') === 'auth_failed') {
       alert('Failed to connect Google Calendar. Please try again.');
@@ -188,9 +188,27 @@ const CalendarPage = () => {
       setLoading(true);
       
       // Load calendar events
+      // Load events - if Google is authenticated, sync and get all events from there
+      // Otherwise, load from local calendar
+      if (googleAuth.authorized) {
+        try {
+          // This will sync Google events into events.json and return all events
+          const googleRes = await apiFetch('/api/google/events');
+          const googleData = await googleRes.json();
+          setEvents(googleData.events || []);
+        } catch (error) {
+          console.error('Failed to load Google Calendar events:', error);
+          // Fallback to local events if Google sync fails
       const evRes = await apiFetch('/api/calendar/events');
       const evData = await evRes.json();
         setEvents(evData.events || []);
+        }
+      } else {
+        // Load local events only
+        const evRes = await apiFetch('/api/calendar/events');
+        const evData = await evRes.json();
+        setEvents(evData.events || []);
+      }
         
         // Load categories
         const catRes = await apiFetch('/api/calendar/categories');
@@ -201,19 +219,6 @@ const CalendarPage = () => {
       const todosRes = await apiFetch('/api/todos');
       const todosData = await todosRes.json();
       setTodos(todosData.todos || []);
-        
-        // Load Google Calendar events if authenticated
-        if (googleAuth.authorized) {
-          try {
-            const googleRes = await apiFetch('/api/google/events');
-            const googleData = await googleRes.json();
-            if (googleData.events) {
-              setEvents(prev => [...prev, ...googleData.events]);
-            }
-          } catch (error) {
-            console.error('Failed to load Google Calendar events:', error);
-          }
-        }
 
         // Load Outlook Calendar events if authenticated
         if (outlookAuth.authorized) {
@@ -245,7 +250,12 @@ const CalendarPage = () => {
     };
 
   const getCategoryColor = (categoryKey) => {
-    const category = categories.find(c => c.key === categoryKey);
+    // Try to find by key first
+    let category = categories.find(c => c.key === categoryKey || c.key === categoryKey?.toLowerCase());
+    // If not found, try by label
+    if (!category) {
+      category = categories.find(c => c.label === categoryKey || c.label === categoryKey?.charAt(0).toUpperCase() + categoryKey?.slice(1));
+    }
     return category?.color || '#3b82f6';
   };
 
@@ -260,8 +270,11 @@ const CalendarPage = () => {
     
     // Check if there's a category mapping for this event name
     const mappedCategory = getEventCategory(eventName);
-    if (mappedCategory && EVENT_CATEGORY_COLORS[mappedCategory]) {
-      return EVENT_CATEGORY_COLORS[mappedCategory];
+    if (mappedCategory) {
+      const mappedColor = getCategoryColor(mappedCategory);
+      if (mappedColor !== '#3b82f6') {
+        return mappedColor;
+      }
     }
     
     // Use event's category if available
@@ -282,6 +295,26 @@ const CalendarPage = () => {
     }
     
     return '#3b82f6';
+  };
+
+  const getEventCategoryClass = (event) => {
+    const eventName = event.summary || event.text || '';
+    const mappedCategory = getEventCategory(eventName);
+    if (mappedCategory) {
+      const category = categories.find(c => c.key === mappedCategory || c.key === mappedCategory.toLowerCase() || c.label === mappedCategory);
+      if (category) {
+        const categoryKey = category.key.toLowerCase();
+        return `event-color-${categoryKey}`;
+      }
+    }
+    if (event.category) {
+      const category = categories.find(c => c.key === event.category || c.key === event.category.toLowerCase());
+      if (category) {
+        const categoryKey = category.key.toLowerCase();
+        return `event-color-${categoryKey}`;
+      }
+    }
+    return '';
   };
   
   const handleEventCategoryChange = (eventName, category) => {
@@ -525,43 +558,25 @@ const CalendarPage = () => {
     <div className="calendar-page">
       {/* Header */}
       <div className="calendar-header">
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '16px',
-          gap: '12px'
-        }}>
-          <h1 style={{
-            margin: 0,
-            fontSize: isMobile ? '20px' : '24px',
-            fontWeight: '600',
-            color: '#1f2937',
-            lineHeight: '1.3',
-            flex: 1
-          }}>
-            {getGreeting()}, {userName} — here's your {viewMode === 'week' ? 'week' : 'day'}.
-          </h1>
-          
+        <div className="calendar-header-top">
+          <h1 className="calendar-greeting">
+          {getGreeting()}, {userName} — here's your {viewMode === 'week' ? 'week' : 'day'}.
+        </h1>
+
           {/* Daily Status Badge */}
           {dailyStatus && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              background: `${dailyStatus.color}15`,
-              border: `1px solid ${dailyStatus.color}40`,
-              flexShrink: 0
-            }}>
-              <span style={{ fontSize: '14px' }}>{dailyStatus.icon}</span>
-              <span style={{
-                fontSize: isMobile ? '11px' : '12px',
-                fontWeight: '600',
-                color: dailyStatus.color,
-                textTransform: 'capitalize'
-              }}>
+            <div 
+              className="status-badge"
+              style={{
+                background: `${dailyStatus.color}15`,
+                border: `1px solid ${dailyStatus.color}40`
+              }}
+            >
+              <span className="status-badge-icon">{dailyStatus.icon}</span>
+              <span 
+                className="status-badge-text"
+                style={{ color: dailyStatus.color }}
+              >
                 {dailyStatus.status}
               </span>
             </div>
@@ -571,14 +586,14 @@ const CalendarPage = () => {
         {/* Daily Status Message */}
         {dailyStatus && dailyStatus.message && showStatusMessage && (
           <div className={`status-message ${dailyStatus.status === 'overloaded' ? 'status-message-overloaded' : 'status-message-balanced'}`}>
-            <span style={{ fontSize: '18px' }}>{dailyStatus.icon}</span>
+            <span className="status-message-icon">{dailyStatus.icon}</span>
             <p className={`status-message-text ${dailyStatus.status === 'overloaded' ? 'status-message-text-overloaded' : 'status-message-text-balanced'}`}>
               {dailyStatus.message}
             </p>
-            <button
+          <button 
               onClick={() => setShowStatusMessage(false)}
               className="status-close-button"
-              style={{
+            style={{ 
                 color: dailyStatus.status === 'overloaded' ? '#991b1b' : '#92400e'
               }}
             >
@@ -591,32 +606,25 @@ const CalendarPage = () => {
         )}
 
         {/* View Selector and Calendar Toggle */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          flexWrap: 'wrap',
-          marginBottom: '16px'
-        }}>
+        <div className="view-selector-container">
           {/* View Selector - Segmented Control */}
           <div className="view-selector">
             <button 
               onClick={() => setViewMode('day')}
               className={`view-button ${viewMode === 'day' ? 'view-button-active' : 'view-button-inactive'}`}
-            >
-              Day
-            </button>
-            <button 
-              onClick={() => setViewMode('week')}
+          >
+            Day
+          </button>
+          <button 
+            onClick={() => setViewMode('week')}
               className={`view-button ${viewMode === 'week' ? 'view-button-active' : 'view-button-inactive'}`}
-            >
-              Week
-            </button>
-          </div>
+          >
+            Week
+          </button>
+        </div>
 
           {/* Calendar Selector */}
-          {googleAuth.authorized && (
+            {googleAuth.authorized && (
             <div className="calendar-selector">
               <select
                 value={selectedGoogleCalendar}
@@ -627,20 +635,20 @@ const CalendarPage = () => {
                 <option value="Mom's calendar">Mom's calendar</option>
                 <option value="Friend's calendar">Friend's calendar</option>
               </select>
-            </div>
-          )}
+          </div>
+        )}
         </div>
 
         {/* Date Navigation */}
         <div className="date-navigation">
           <div>
             {viewMode === 'week' ? (
-              <div className="date-display" style={{ fontSize: isMobile ? '18px' : '20px' }}>
+              <div className="date-display">
                 {formatWeekRange()}
               </div>
             ) : (
               <>
-                <div className="date-display" style={{ fontSize: isMobile ? '18px' : '20px' }}>
+                <div className="date-display">
                   {formatDateDisplay(currentDate)}
                 </div>
                 <div className="date-month-year">
@@ -678,35 +686,13 @@ const CalendarPage = () => {
 
       {/* Timeline */}
       {viewMode === 'day' && (
-        <div style={{ 
-          padding: isMobile ? '16px' : '24px',
-          position: 'relative'
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            position: 'relative'
-          }}>
+        <div className="timeline-container">
+          <div className="timeline-wrapper">
             {/* Time Labels */}
-            <div style={{
-              width: '60px',
-              flexShrink: 0
-            }}>
+            <div className="time-labels">
               {hours.map(hour => (
-                <div
-                  key={hour}
-                  style={{
-                    height: '60px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    paddingTop: '8px'
-                  }}
-                >
-                  <span style={{
-                    fontSize: '13px',
-                    color: '#9ca3af',
-                    fontWeight: '500'
-                  }}>
+                <div key={hour} className="time-label-item">
+                  <span className="time-label-text">
                     {hour === 0 ? '12 am' : hour === 3 ? '3 am' : hour === 12 ? '12 pm' : hour > 12 ? `${hour - 12} pm` : `${hour} am`}
                   </span>
                 </div>
@@ -714,39 +700,14 @@ const CalendarPage = () => {
             </div>
 
             {/* Events Column */}
-              <div style={{
-              flex: 1,
-                  position: 'relative', 
-              minHeight: `${hours.length * 60}px`
-            }}>
+            <div className="events-column">
               {/* Current Time Indicator */}
               {isSameDay(currentDate, currentTime) && (
                 <div
-                  style={{
-                    position: 'absolute',
-                    top: `${getCurrentTimeTop()}px`,
-                    left: 0,
-                    right: 0,
-                    height: '2px',
-                    background: '#3b82f6',
-                    zIndex: 100,
-                    pointerEvents: 'none',
-                    boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)'
-                  }}
+                  className="current-time-indicator"
+                  style={{ top: `${getCurrentTimeTop()}px` }}
                 >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '-8px',
-                      top: '-4px',
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      background: '#3b82f6',
-                      border: '2px solid white',
-                      boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)'
-                    }}
-                  />
+                  <div className="current-time-dot" />
                 </div>
               )}
               {dayEvents.map((item, index) => {
@@ -756,21 +717,13 @@ const CalendarPage = () => {
                 
                 // For tasks, show only a small indicator
                 if (isTask) {
-                  return (
-                    <div
-                      key={index}
+                      return (
+                  <div
+                    key={index}
+                      className="task-indicator"
                       style={{
-                        position: 'absolute',
                         top: `${top}px`,
-                        left: '4px',
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        background: item.color,
-                        border: `2px solid white`,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                        zIndex: 10,
-                        cursor: 'default'
+                        background: item.color
                       }}
                       title={item.text || item.summary}
                     />
@@ -778,76 +731,48 @@ const CalendarPage = () => {
                 }
                 
                 // For events, show full details
+                const categoryClass = getEventCategoryClass(item);
                 return (
                   <div
                     key={index}
+                    className={`event-item ${categoryClass}`}
                     onClick={() => {
-                      // Ensure we pass the full event object with all properties
-                      const eventToShow = {
-                        id: item.id,
-                        summary: item.summary,
-                        start: item.start || item.startTime?.toISOString(),
-                        end: item.end || item.endTime?.toISOString(),
-                        category: item.category,
-                        ...item
-                      };
-                      setSelectedEvent(eventToShow);
-                      setShowEventModal(true);
+                        // Ensure we pass the full event object with all properties
+                        const eventToShow = {
+                          id: item.id,
+                          summary: item.summary,
+                          start: item.start || item.startTime?.toISOString(),
+                          end: item.end || item.endTime?.toISOString(),
+                          category: item.category,
+                          ...item
+                        };
+                        setSelectedEvent(eventToShow);
+                        setShowEventModal(true);
                     }}
                     style={{
-                      position: 'absolute',
                       top: `${top}px`,
-                      left: 0,
-                      right: 0,
                       height: `${height}px`,
-                      background: `${item.color}20`,
-                      border: `2px solid ${item.color}`,
-                      borderRadius: '8px',
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      minHeight: '40px',
-                      overflow: 'hidden',
-                      boxSizing: 'border-box'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = `${item.color}30`;
-                      e.currentTarget.style.transform = 'scale(1.02)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = `${item.color}20`;
-                      e.currentTarget.style.transform = 'scale(1)';
+                      background: categoryClass ? undefined : `${item.color}20`,
+                      border: categoryClass ? undefined : `2px solid ${item.color}`
                     }}
                   >
-                    <div style={{
-                      fontSize: '11px',
-                      fontWeight: '400',
-                      color: '#1f2937',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: height > 30 ? 'normal' : 'nowrap',
-                      wordBreak: 'break-word',
-                      lineHeight: '1.1',
-                      maxHeight: height > 30 ? 'none' : '14px'
-                    }}>
+                    <div 
+                      className="event-item-text"
+                      style={{
+                        whiteSpace: height > 30 ? 'normal' : 'nowrap',
+                        maxHeight: height > 30 ? 'none' : '14px'
+                      }}
+                    >
                       {item.summary || item.text}
                       {item.sharedCalendarName && (
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: '400',
-                          color: '#6b7280',
-                          marginLeft: '6px'
-                        }}>
+                        <span className="event-item-shared">
                           ({item.sharedCalendarName})
                         </span>
                       )}
                     </div>
-                  </div>
-                );
-              })}
+                      </div>
+                    );
+                  })}
             </div>
           </div>
         </div>
@@ -855,31 +780,10 @@ const CalendarPage = () => {
 
       {/* Week View */}
       {viewMode === 'week' && (
-        <div style={{ 
-          padding: isMobile ? '8px 4px' : '24px',
-          overflowX: isMobile ? 'hidden' : 'auto',
-          WebkitOverflowScrolling: 'touch',
-          width: '100%'
-        }}>
-          <div style={{
-            width: '100%',
-            minWidth: isMobile ? 'auto' : '700px'
-          }}>
+        <div className="week-container">
+          <div className="week-wrapper">
             {/* Day Headers */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '32px repeat(7, 1fr)' : '60px repeat(7, 1fr)',
-              gap: isMobile ? '2px' : '8px',
-              marginBottom: '8px',
-              position: 'sticky',
-              top: 0,
-              background: 'white',
-              zIndex: 10,
-              paddingBottom: '8px',
-              borderBottom: '1px solid #e5e7eb',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
+            <div className="week-day-headers">
               <div></div>
               {getWeekDays().map((day, index) => {
                 const isToday = isSameDay(day, new Date());
@@ -887,36 +791,11 @@ const CalendarPage = () => {
                 const dayNumber = day.getDate();
                 
                 return (
-                  <div
-                    key={index}
-                    style={{
-                      textAlign: 'center',
-                      padding: isMobile ? '4px 1px' : '8px 4px'
-                    }}
-                  >
-                    <div style={{
-                      fontSize: isMobile ? '9px' : '12px',
-                      color: '#6b7280',
-                      fontWeight: '500',
-                      marginBottom: isMobile ? '2px' : '4px',
-                      lineHeight: '1.2'
-                    }}>
+                  <div key={index} className="week-day-header">
+                    <div className="week-day-name">
                       {dayName}
                     </div>
-                    <div style={{
-                      fontSize: isMobile ? '12px' : '16px',
-                      fontWeight: '600',
-                      color: isToday ? '#3b82f6' : '#1f2937',
-                      width: isToday ? (isMobile ? '24px' : '32px') : 'auto',
-                      height: isToday ? (isMobile ? '24px' : '32px') : 'auto',
-                      borderRadius: isToday ? '50%' : '0',
-                      background: isToday ? '#3b82f620' : 'transparent',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto',
-                      lineHeight: '1'
-                    }}>
+                    <div className={`week-day-number ${isToday ? 'week-day-number-today' : ''}`}>
                       {dayNumber}
                     </div>
                   </div>
@@ -925,42 +804,12 @@ const CalendarPage = () => {
             </div>
 
             {/* Calendar Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '32px repeat(7, 1fr)' : '60px repeat(7, 1fr)',
-              gap: isMobile ? '2px' : '8px',
-              position: 'relative',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
+            <div className="week-calendar-grid">
               {/* Time Labels */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'sticky',
-                left: 0,
-                background: 'white',
-                zIndex: 5
-              }}>
+              <div className="week-time-labels">
                 {hours.map(hour => (
-                  <div
-                    key={hour}
-                    style={{
-                      height: isMobile ? '45px' : '60px',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      paddingTop: '4px',
-                      paddingRight: isMobile ? '2px' : '8px',
-                      justifyContent: 'flex-end',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <span style={{
-                      fontSize: isMobile ? '9px' : '12px',
-                      color: '#9ca3af',
-                      fontWeight: '500',
-                      lineHeight: '1'
-                    }}>
+                  <div key={hour} className="week-time-label-item">
+                    <span className="week-time-label-text">
                       {hour === 0 ? '12' : hour === 3 ? '3' : hour === 12 ? '12' : hour > 12 ? `${hour - 12}` : `${hour}`}
                       {isMobile ? '' : (hour === 0 ? ' am' : hour === 3 ? ' am' : hour === 12 ? ' pm' : hour > 12 ? ' pm' : ' am')}
                     </span>
@@ -983,54 +832,26 @@ const CalendarPage = () => {
                 return (
                   <div
                     key={dayIndex}
-                    style={{
-                      position: 'relative',
-                      minHeight: isMobile ? `${hours.length * 45}px` : `${hours.length * 60}px`,
-                      borderRight: dayIndex < 6 ? '1px solid #e5e7eb' : 'none',
-                      overflow: 'visible'
-                    }}
+                    className="week-day-column"
+                    style={{ gridColumn: dayIndex + 2 }}
                   >
                     {/* Hour Grid Lines */}
                     {hours.map((hour, hourIndex) => (
                       <div
                         key={hour}
-                        style={{
-                          height: isMobile ? '45px' : '60px',
-                          borderBottom: hourIndex < hours.length - 1 ? '1px solid #f3f4f6' : 'none',
-                          boxSizing: 'border-box',
-                          pointerEvents: 'none'
-                        }}
+                        className="week-hour-line"
                       />
                     ))}
 
                     {/* Current Time Indicator */}
                     {isSameDay(day, currentTime) && (
                       <div
+                        className="week-current-time-indicator"
                         style={{
-                          position: 'absolute',
-                          top: `${isMobile ? getCurrentTimeTop() * (45/60) : getCurrentTimeTop()}px`,
-                          left: 0,
-                          right: 0,
-                          height: '2px',
-                          background: '#3b82f6',
-                          zIndex: 100,
-                          pointerEvents: 'none',
-                          boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)'
+                          top: `${isMobile ? getCurrentTimeTop() * (45/60) : getCurrentTimeTop()}px`
                         }}
                       >
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: '-6px',
-                            top: '-4px',
-                            width: isMobile ? '8px' : '10px',
-                            height: isMobile ? '8px' : '10px',
-                            borderRadius: '50%',
-                            background: '#3b82f6',
-                            border: '2px solid white',
-                            boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)'
-                          }}
-                        />
+                        <div className="week-current-time-dot" />
                       </div>
                     )}
 
@@ -1043,21 +864,13 @@ const CalendarPage = () => {
                       
                       // For tasks, show only a small indicator
                       if (isTask) {
-                        return (
-                          <div
-                            key={eventIndex}
+                      return (
+                        <div
+                          key={eventIndex}
+                            className="week-task-indicator"
                             style={{
-                              position: 'absolute',
                               top: `${top}px`,
-                              left: isMobile ? '2px' : '4px',
-                              width: isMobile ? '6px' : '8px',
-                              height: isMobile ? '6px' : '8px',
-                              borderRadius: '50%',
-                              background: item.color,
-                              border: `2px solid white`,
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                              zIndex: 10,
-                              cursor: 'default'
+                              background: item.color
                             }}
                             title={item.text || item.summary}
                           />
@@ -1065,74 +878,41 @@ const CalendarPage = () => {
                       }
                       
                       // For events, show full details
+                      const categoryClass = getEventCategoryClass(item);
                       return (
                         <div
                           key={eventIndex}
+                          className={`week-event-item ${categoryClass}`}
                           onClick={() => {
-                            // Ensure we pass the full event object with all properties
-                            const eventToShow = {
-                              id: item.id,
-                              summary: item.summary,
-                              start: item.start || item.startTime?.toISOString(),
-                              end: item.end || item.endTime?.toISOString(),
-                              category: item.category,
-                              ...item
-                            };
-                            setSelectedEvent(eventToShow);
-                            setShowEventModal(true);
+                              // Ensure we pass the full event object with all properties
+                              const eventToShow = {
+                                id: item.id,
+                                summary: item.summary,
+                                start: item.start || item.startTime?.toISOString(),
+                                end: item.end || item.endTime?.toISOString(),
+                                category: item.category,
+                                ...item
+                              };
+                              setSelectedEvent(eventToShow);
+                              setShowEventModal(true);
                           }}
                           style={{
-                            position: 'absolute',
                             top: `${top}px`,
-                            left: isMobile ? '1px' : '4px',
-                            right: isMobile ? '1px' : '4px',
                             height: `${height}px`,
-                            background: `${item.color}25`,
-                            border: `1.5px solid ${item.color}`,
-                            borderRadius: isMobile ? '3px' : '6px',
-                            padding: isMobile ? '2px 3px' : '4px 5px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            minHeight: isMobile ? '20px' : '32px',
-                            zIndex: 1,
-                            overflow: 'hidden',
-                            boxSizing: 'border-box'
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.background = `${item.color}35`;
-                            e.currentTarget.style.zIndex = 2;
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.background = `${item.color}25`;
-                            e.currentTarget.style.zIndex = 1;
+                            background: categoryClass ? undefined : `${item.color}25`,
+                            border: categoryClass ? undefined : `1.5px solid ${item.color}`
                           }}
                         >
-                          <div style={{
-                            fontSize: isMobile ? '10px' : '11px',
-                            fontWeight: '400',
-                            color: '#111827',
-                            lineHeight: '1.1',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: height > (isMobile ? 25 : 30) ? 'normal' : 'nowrap',
-                            wordBreak: 'break-word',
-                            display: '-webkit-box',
-                            WebkitLineClamp: height > (isMobile ? 25 : 30) ? 4 : 3,
-                            WebkitBoxOrient: 'vertical',
-                            flex: 1,
-                            textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
-                          }}>
+                          <div 
+                            className="week-event-item-text"
+                            style={{
+                              whiteSpace: height > (isMobile ? 25 : 30) ? 'normal' : 'nowrap',
+                              WebkitLineClamp: height > (isMobile ? 25 : 30) ? 4 : 3
+                            }}
+                          >
                             {eventText}
                             {item.sharedCalendarName && (
-                              <span style={{
-                                fontSize: isMobile ? '9px' : '10px',
-                                fontWeight: '400',
-                                color: '#6b7280',
-                                marginLeft: '4px'
-                              }}>
+                              <span className="week-event-item-shared">
                                 ({item.sharedCalendarName})
                               </span>
                             )}
@@ -1149,36 +929,10 @@ const CalendarPage = () => {
       )}
 
       {/* Floating Action Button */}
-      <div style={{ position: 'relative' }}>
+      <div className="fab-container">
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
-          style={{
-            position: 'fixed',
-            bottom: isMobile ? '100px' : '120px',
-            right: isMobile ? '20px' : '40px',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: '#374151',
-            border: 'none',
-            color: 'white',
-            fontSize: '28px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1001,
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.target.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-          }}
+          className="fab-button"
         >
           +
         </button>
@@ -1187,55 +941,17 @@ const CalendarPage = () => {
         {showAddMenu && (
           <>
             <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 1000,
-                background: 'transparent'
-              }}
+              className="add-menu-overlay"
               onClick={() => setShowAddMenu(false)}
             />
-            <div
-              style={{
-                position: 'fixed',
-                bottom: isMobile ? '170px' : '190px',
-                right: isMobile ? '20px' : '40px',
-                background: 'white',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                zIndex: 1002,
-                minWidth: '200px',
-                overflow: 'hidden',
-                border: '1px solid #e5e7eb'
-              }}
-            >
+            <div className="add-menu-dropdown">
               <button
                 onClick={() => {
                   setShowAddMenu(false);
                   setSelectedEvent(null);
                   setShowEventModal(true);
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.background = '#f9fafb';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.background = 'white';
-                }}
+                className="add-menu-item"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19"/>
@@ -1243,36 +959,13 @@ const CalendarPage = () => {
                 </svg>
                 Add manually
               </button>
-              <div style={{
-                height: '1px',
-                background: '#e5e7eb'
-              }} />
+              <div className="add-menu-divider" />
               <button
                 onClick={() => {
                   setShowAddMenu(false);
                   navigate('/app/althy');
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.background = '#f9fafb';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.background = 'white';
-                }}
+                className="add-menu-item"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -1291,6 +984,7 @@ const CalendarPage = () => {
           categories={categories}
           eventCategoryMapping={eventCategoryMapping}
           onCategoryChange={handleEventCategoryChange}
+          mode={selectedEvent?.id ? 'view' : 'edit'}
           onClose={() => {
             setShowEventModal(false);
             setSelectedEvent(null);
@@ -1301,6 +995,32 @@ const CalendarPage = () => {
             loadData();
           }}
         />
+      )}
+
+      {/* Notification Modal */}
+      {showNotification && (
+        <div
+          className={`notification-modal ${!isMobile ? 'notification-modal-desktop' : ''}`}
+          onClick={() => setShowNotification(false)}
+        >
+          <div className="notification-icon-container">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <p className="notification-message">
+            {notificationMessage}
+          </p>
+          <button
+            onClick={() => setShowNotification(false)}
+            className="notification-close"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );

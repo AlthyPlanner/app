@@ -6,6 +6,7 @@ import MobileMenu from './MobileMenu';
 const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = window.innerWidth < 768;
   
   // Extract current page from pathname
   const getCurrentPage = () => {
@@ -24,6 +25,9 @@ const AppLayout = () => {
     navigate(`/app/${page}`);
   };
 
+  // Calculate header height (logo header)
+  const headerHeight = isMobile ? 80 : 72; // padding (12px * 2) + logo height (56px or 72px)
+
   return (
     <div style={{ 
       width: '100%',
@@ -39,6 +43,7 @@ const AppLayout = () => {
       <div style={{ 
         background: '#f9f9f9', 
         minHeight: 'calc(100vh - 80px)',
+        paddingTop: `${headerHeight}px`, // Space for fixed header
         paddingBottom: '100px',
         width: '100%',
         overflowX: 'hidden',

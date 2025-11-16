@@ -1,0 +1,68 @@
+/* ProfilePage Styles */
+
+.notification-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  min-width: 280px;
+  max-width: 90vw;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.notification-modal-desktop {
+  min-width: 320px;
+}
+
+.notification-icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #10b98120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+  flex: 1;
+}
+
+.notification-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+  background: #f3f4f6;
+}
+
+/* Media Queries */
+@media (min-width: 768px) {
+  .notification-modal {
+    min-width: 320px;
+  }
+}
+

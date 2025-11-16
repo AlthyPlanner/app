@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import TodoList from '../features/TodoList';
 import QuickNotes from '../features/QuickNotes';
 import TaskModal from '../modals/TaskModal';
+import { getCombinedHistory, formatHistoryDate, formatHistoryTime } from '../../utils/taskHistory';
+import './TasksPage.css';
 
 const TasksPage = () => {
   const navigate = useNavigate();
@@ -11,6 +13,8 @@ const TasksPage = () => {
   const [dateFilter, setDateFilter] = useState('today'); // 'today', 'thisWeek'
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -28,6 +32,28 @@ const TasksPage = () => {
       setDateFilter('thisWeek');
     }
   }, [viewMode]);
+
+  // Load history when showing history panel
+  useEffect(() => {
+    if (showHistory) {
+      const history = getCombinedHistory();
+      setHistoryData(history);
+    }
+  }, [showHistory]);
+
+  // Close history when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showHistory && !event.target.closest('[data-history-panel]') && !event.target.closest('[data-history-button]')) {
+        setShowHistory(false);
+      }
+    };
+    
+    if (showHistory) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showHistory]);
 
 
   const getFormattedDate = () => {
@@ -58,67 +84,23 @@ const TasksPage = () => {
   };
 
   return (
-    <div style={{ 
-      width: '100%',
-      maxWidth: '100%',
-      paddingBottom: '200px',
-      background: 'white',
-      minHeight: 'calc(100vh - 80px)',
-      display: 'flex',
-      flexDirection: 'column',
-      WebkitOverflowScrolling: 'touch'
-    }}>
+    <div className="tasks-page">
       {/* Header */}
-      <div style={{
-        padding: isMobile ? '20px 16px 16px' : '24px 24px 20px',
-        borderBottom: '1px solid #f0f0f0'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '8px'
-        }}>
+      <div className={`tasks-header ${!isMobile ? 'tasks-header-desktop' : ''}`}>
+        <div className="tasks-header-top">
           <div>
-            <h1 style={{
-              margin: 0,
-              fontSize: isMobile ? '24px' : '28px',
-              fontWeight: '700',
-              color: '#1f2937',
-              lineHeight: '1.2',
-              marginBottom: '4px'
-            }}>
+            <h1 className={`tasks-title ${!isMobile ? 'tasks-title-desktop' : ''}`}>
               Take it one task at a time
             </h1>
-            <p style={{
-              margin: 0,
-              fontSize: isMobile ? '14px' : '16px',
-              color: '#6b7280',
-              fontWeight: '400'
-            }}>
+            <p className={`tasks-date ${!isMobile ? 'tasks-date-desktop' : ''}`}>
               {getFormattedDate()}
             </p>
           </div>
           <button
-            onClick={() => window.location.reload()}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6b7280',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = '#f3f4f6';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-            }}
+            data-history-button
+            onClick={() => setShowHistory(!showHistory)}
+            title="Task & Note History"
+            className={`history-button ${showHistory ? 'history-button-active' : ''}`}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
@@ -128,40 +110,15 @@ const TasksPage = () => {
         </div>
 
         {/* Filter Section */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          marginTop: '20px'
-        }}>
+        <div className="filter-section">
           {/* View Selector - Segmented Control */}
-          <div style={{
-            display: 'flex',
-            background: '#f3f4f6',
-            borderRadius: '10px',
-            padding: '4px',
-            gap: '4px',
-            width: '100%'
-          }}>
+          <div className="view-selector">
             <button
               onClick={() => {
                 setViewMode('today');
                 setDateFilter('today');
               }}
-              style={{
-                flex: 1,
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: viewMode === 'today' ? 'white' : 'transparent',
-                color: viewMode === 'today' ? '#1f2937' : '#6b7280',
-                fontSize: '14px',
-                fontWeight: viewMode === 'today' ? '600' : '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: viewMode === 'today' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                whiteSpace: 'nowrap'
-              }}
+              className={`view-button ${viewMode === 'today' ? 'view-button-active' : ''}`}
             >
               Today
             </button>
@@ -170,20 +127,7 @@ const TasksPage = () => {
                 setViewMode('thisWeek');
                 setDateFilter('thisWeek');
               }}
-              style={{
-                flex: 1,
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: viewMode === 'thisWeek' ? 'white' : 'transparent',
-                color: viewMode === 'thisWeek' ? '#1f2937' : '#6b7280',
-                fontSize: '14px',
-                fontWeight: viewMode === 'thisWeek' ? '600' : '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: viewMode === 'thisWeek' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                whiteSpace: 'nowrap'
-              }}
+              className={`view-button ${viewMode === 'thisWeek' ? 'view-button-active' : ''}`}
             >
               This week
             </button>
@@ -191,20 +135,7 @@ const TasksPage = () => {
               onClick={() => {
                 setViewMode('all');
               }}
-              style={{
-                flex: 1,
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: viewMode === 'all' ? 'white' : 'transparent',
-                color: viewMode === 'all' ? '#1f2937' : '#6b7280',
-                fontSize: '14px',
-                fontWeight: viewMode === 'all' ? '600' : '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: viewMode === 'all' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                whiteSpace: 'nowrap'
-              }}
+              className={`view-button ${viewMode === 'all' ? 'view-button-active' : ''}`}
             >
               All
             </button>
@@ -214,13 +145,7 @@ const TasksPage = () => {
       </div>
 
       {/* Task List */}
-      <div style={{
-        padding: isMobile ? '16px' : '24px',
-        maxWidth: '1200px',
-        width: '100%',
-        margin: '0 auto',
-        flex: 1
-      }}>
+      <div className={`task-list-container ${!isMobile ? 'task-list-container-desktop' : ''}`}>
         <TodoList 
           viewMode={viewMode}
           dateFilter={dateFilter}
@@ -229,55 +154,16 @@ const TasksPage = () => {
 
       {/* Quick Notes - Connected to menu (only show for Today and This week views) */}
       {viewMode !== 'all' && (
-        <div style={{
-          position: 'fixed',
-          bottom: isMobile ? '80px' : '80px',
-          left: 0,
-          right: 0,
-          maxWidth: '1200px',
-          width: '100%',
-          margin: '0 auto',
-          padding: isMobile ? '16px' : '24px',
-          paddingBottom: isMobile ? '16px' : '24px',
-          background: 'white',
-          borderTop: '1px solid #e5e7eb',
-          zIndex: 100
-        }}>
+        <div className={`quick-notes-container ${!isMobile ? 'quick-notes-container-desktop' : ''}`}>
           <QuickNotes date={getNotesDate()} />
         </div>
       )}
 
       {/* Floating Action Button */}
-      <div style={{ position: 'relative' }}>
+      <div className="fab-container">
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
-          style={{
-            position: 'fixed',
-            bottom: isMobile ? '100px' : '120px',
-            right: isMobile ? '20px' : '40px',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: '#374151',
-            border: 'none',
-            color: 'white',
-            fontSize: '28px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1001,
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.target.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-          }}
+          className={`fab-button ${!isMobile ? 'fab-button-desktop' : ''}`}
         >
           +
         </button>
@@ -286,54 +172,16 @@ const TasksPage = () => {
         {showAddMenu && (
           <>
             <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 1000,
-                background: 'transparent'
-              }}
+              className="add-menu-overlay"
               onClick={() => setShowAddMenu(false)}
             />
-            <div
-              style={{
-                position: 'fixed',
-                bottom: isMobile ? '170px' : '190px',
-                right: isMobile ? '20px' : '40px',
-                background: 'white',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                zIndex: 1002,
-                minWidth: '200px',
-                overflow: 'hidden',
-                border: '1px solid #e5e7eb'
-              }}
-            >
+            <div className={`add-menu-dropdown ${!isMobile ? 'add-menu-dropdown-desktop' : ''}`}>
               <button
                 onClick={() => {
                   setShowAddMenu(false);
                   setShowTaskModal(true);
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.background = '#f9fafb';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.background = 'white';
-                }}
+                className="add-menu-item"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19"/>
@@ -341,36 +189,13 @@ const TasksPage = () => {
                 </svg>
                 Add manually
               </button>
-              <div style={{
-                height: '1px',
-                background: '#e5e7eb'
-              }} />
+              <div className="add-menu-divider" />
               <button
                 onClick={() => {
                   setShowAddMenu(false);
                   navigate('/app/althy');
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.background = '#f9fafb';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.background = 'white';
-                }}
+                className="add-menu-item"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -391,6 +216,111 @@ const TasksPage = () => {
             window.location.reload();
           }}
         />
+      )}
+
+      {/* History Panel */}
+      {showHistory && (
+        <div 
+          data-history-panel
+          className={`history-panel ${!isMobile ? 'history-panel-desktop' : ''}`}
+        >
+          <div className="history-panel-header">
+            <h3 className="history-panel-title">
+              Task & Note History
+            </h3>
+            <button
+              onClick={() => setShowHistory(false)}
+              className="history-panel-close"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div className="history-panel-content">
+            {historyData.length === 0 ? (
+              <div className="history-empty">
+                <p className="history-empty-text">
+                  No history yet. Your tasks and notes will appear here.
+                </p>
+              </div>
+            ) : (
+              historyData.map((dateGroup, groupIndex) => (
+                <div key={dateGroup.date} className={`history-date-group ${groupIndex < historyData.length - 1 ? '' : ''}`}>
+                  {/* Date Header */}
+                  <div className="history-date-header">
+                    <h4 className="history-date-title">
+                      {formatHistoryDate(dateGroup.date)}
+                    </h4>
+                  </div>
+
+                  {/* Items for this date */}
+                  <div className="history-items">
+                    {dateGroup.items.map((item, itemIndex) => (
+                      <div
+                        key={item.id || `${itemIndex}-${item.timestamp}`}
+                        className={`history-item ${item.type === 'note' ? 'history-item-note' : ''}`}
+                      >
+                        {/* Item Header */}
+                        <div className="history-item-header">
+                          <div className="history-item-type">
+                            {item.type === 'note' ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                              </svg>
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                                <polyline points="9 11 12 14 22 4"/>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                              </svg>
+                            )}
+                            <span className={`history-item-label ${item.type === 'note' ? 'history-item-label-note' : ''}`}>
+                              {item.type === 'note' ? 'Note' : `Task ${item.action}`}
+                            </span>
+                          </div>
+                          <span className="history-item-time">
+                            {formatHistoryTime(item.timestamp)}
+                          </span>
+                        </div>
+
+                        {/* Item Content */}
+                        <div className={`history-item-content ${item.type === 'task' ? 'history-item-content-task' : ''}`}>
+                          {item.content}
+                        </div>
+
+                        {/* Task Metadata */}
+                        {item.type === 'task' && item.metadata && (
+                          <div className="history-item-metadata">
+                            {item.metadata.priority && item.metadata.priority !== 'none' && (
+                              <span className="history-badge history-badge-priority">
+                                {item.metadata.priority} priority
+                              </span>
+                            )}
+                            {item.metadata.category && (
+                              <span className="history-badge history-badge-category">
+                                {item.metadata.category}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Note Type Badge */}
+                        {item.type === 'note' && item.metadata?.noteType && (
+                          <span className="history-badge history-badge-note-type">
+                            {item.metadata.noteType === 'week' ? 'Week Notes' : 'Day Notes'}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

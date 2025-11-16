@@ -17,7 +17,7 @@ const openaiController = {
           error: 'OpenAI API is not configured. Please set OPENAI_API_KEY environment variable.' 
         });
       }
-
+      
       // Generate AI response
       const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',

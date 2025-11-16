@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiFetch, API_BASE } from '../../api';
 import ProfileEditModal from '../modals/ProfileEditModal';
 import SharedCalendarModal from '../modals/SharedCalendarModal';
+import './ProfilePage.css';
 
 const ProfilePage = () => {
   const [user, setUser] = useState({ name: 'Jing Huang', role: 'Student', chronotype: 'early' });
@@ -25,6 +26,8 @@ const ProfilePage = () => {
   const [sharedCalendars, setSharedCalendars] = useState([]);
   const [showSharedCalendarModal, setShowSharedCalendarModal] = useState(false);
   const [selectedSharedCalendar, setSelectedSharedCalendar] = useState(null);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
 
   useEffect(() => {
     const handleResize = () => {
@@ -38,9 +41,32 @@ const ProfilePage = () => {
     
     // Check for OAuth callback parameters
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('outlook_auth') === 'success') {
-      checkOutlookAuth();
+    if (urlParams.get('auth') === 'success') {
+      // Add a small delay to ensure session is established, then check auth status
+      setTimeout(async () => {
+        await checkGoogleAuth();
+        setNotificationMessage('Successfully connected to Google Calendar!');
+        setShowNotification(true);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setShowNotification(false), 3000);
+      }, 500);
       // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (urlParams.get('outlook_auth') === 'success') {
+      // Add a small delay to ensure session is established, then check auth status
+      setTimeout(async () => {
+        await checkOutlookAuth();
+        setNotificationMessage('Successfully connected to Outlook Calendar!');
+        setShowNotification(true);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setShowNotification(false), 3000);
+      }, 500);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (urlParams.get('error') === 'auth_failed') {
+      alert('Failed to connect Google Calendar. Please try again.');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     if (urlParams.get('error') === 'outlook_auth_failed') {
@@ -98,6 +124,10 @@ const ProfilePage = () => {
       });
       if (response.ok) {
         setGoogleAuth({ authorized: false, user: null });
+        setNotificationMessage('Successfully disconnected from Google Calendar!');
+        setShowNotification(true);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setShowNotification(false), 3000);
       }
     } catch (error) {
       console.error('Failed to disconnect Google Calendar:', error);
@@ -116,6 +146,10 @@ const ProfilePage = () => {
       });
       if (response.ok) {
         setOutlookAuth({ authorized: false, user: null });
+        setNotificationMessage('Successfully disconnected from Outlook Calendar!');
+        setShowNotification(true);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setShowNotification(false), 3000);
       }
     } catch (error) {
       console.error('Failed to disconnect Outlook Calendar:', error);
@@ -336,11 +370,11 @@ const ProfilePage = () => {
       </div>
 
       {/* Content */}
-      <div style={{
+        <div style={{
         padding: isMobile ? '16px' : '24px',
         maxWidth: '800px',
         margin: '0 auto'
-      }}>
+        }}>
         {/* Profile Card */}
         <div style={{
           background: 'white',
@@ -358,58 +392,58 @@ const ProfilePage = () => {
             gap: '8px',
             alignItems: 'center'
           }}>
-            <button
+          <button
               onClick={() => setShowEditModal(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = '#f3f4f6';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'transparent';
-              }}
-            >
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '8px',
+              color: '#6b7280',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#f3f4f6';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'transparent';
+            }}
+          >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-            <button
+            </svg>
+          </button>
+          <button
               onClick={() => {}}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '8px',
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = '#f3f4f6';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'transparent';
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '8px',
+              color: '#6b7280',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#f3f4f6';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'transparent';
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.39 1.26 1 1.51.21.09.44.13.67.13H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-              </svg>
-            </button>
+            </svg>
+          </button>
           </div>
 
           <div style={{
@@ -1134,6 +1168,32 @@ const ProfilePage = () => {
           }}
           onSave={handleAddSharedCalendar}
         />
+      )}
+
+      {/* Notification Modal */}
+      {showNotification && (
+        <div
+          className={`notification-modal ${!isMobile ? 'notification-modal-desktop' : ''}`}
+          onClick={() => setShowNotification(false)}
+        >
+          <div className="notification-icon-container">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <p className="notification-message">
+            {notificationMessage}
+          </p>
+          <button
+            onClick={() => setShowNotification(false)}
+            className="notification-close"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );

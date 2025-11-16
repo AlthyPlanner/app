@@ -9,9 +9,15 @@ const Header = ({ currentPage, onNavigate }) => {
       alignItems: 'center', 
       justifyContent: 'center',
       padding: isMobile ? '12px 0' : '0',
-      background: isMobile ? 'white' : 'transparent',
+      background: 'white',
       borderBottom: '1px solid #e5e7eb',
-      boxShadow: isMobile ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 50,
+      width: '100%'
     }}>
       <img 
         src="/img/logo-blue.png" 

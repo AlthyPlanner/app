@@ -2,21 +2,41 @@
   {
     "key": "work",
     "label": "Work",
-    "color": "#1976d2"
+    "color": "#6A8FA6"
   },
   {
     "key": "study",
     "label": "Study",
-    "color": "#8e24aa"
+    "color": "#E6E6FA"
   },
   {
-    "key": "fitness",
-    "label": "Fitness",
-    "color": "#2e7d32"
+    "key": "personal",
+    "label": "Personal",
+    "color": "#FFE4D1"
   },
   {
     "key": "leisure",
     "label": "Leisure",
-    "color": "#ef6c00"
+    "color": "#C8F5E1"
+  },
+  {
+    "key": "fitness",
+    "label": "Fitness",
+    "color": "#7CCAC1"
+  },
+  {
+    "key": "health",
+    "label": "Health",
+    "color": "#FFB7A8"
+  },
+  {
+    "key": "travel",
+    "label": "Travel",
+    "color": "#F6E4A6"
+  },
+  {
+    "key": "rest",
+    "label": "Rest",
+    "color": "#DDEFF5"
   }
 ]

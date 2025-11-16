@@ -13,6 +13,7 @@ import {
   calculateDailyStatus, 
   getWorkflowMessage 
 } from '../../utils/balanceTracker';
+import './AlthyPage.css';
 
 const AlthyPage = () => {
   const navigate = useNavigate();
@@ -195,7 +196,7 @@ const AlthyPage = () => {
         } catch (e) {
           if (res.status === 0 || !res.status) {
             errorMsg = 'Network error. Make sure the server is running on port 5001.';
-          } else {
+      } else {
             errorMsg = `Server error (${res.status}). Please try again.`;
           }
         }
@@ -311,27 +312,38 @@ const AlthyPage = () => {
   const inputGap = isMobile ? '8px' : '12px';
   const bottomOffset = isMobile ? '80px' : '80px';
 
+  // Calculate header heights
+  const logoHeaderHeight = isMobile ? 80 : 72; // Logo header height from AppLayout
+  const buttonHeaderHeight = isMobile ? 68 : 76; // Button header height (padding + button)
+  const totalHeaderHeight = logoHeaderHeight + buttonHeaderHeight;
+
   return (
     <div style={{ 
       minHeight: 'calc(100vh - 100px)',
       background: 'white',
       display: 'flex',
       flexDirection: 'column',
+      paddingTop: `${totalHeaderHeight}px`, // Space for both fixed headers (logo + buttons)
       paddingBottom: bottomOffset,
       width: '100%',
       maxWidth: '100%',
-      overflowX: 'hidden'
+      overflowX: 'hidden',
+      marginTop: `-${logoHeaderHeight}px` // Offset AppLayout's paddingTop since we're handling both headers
     }}>
-      {/* Header */}
+      {/* Header - Fixed (Button Header) */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'flex-end', 
         alignItems: 'center', 
         padding: isMobile ? '16px' : '20px',
-        position: 'sticky',
-        top: 0,
+        position: 'fixed',
+        top: `${logoHeaderHeight}px`, // Position below logo header
+        left: 0,
+        right: 0,
         background: 'white',
-        zIndex: 10
+        zIndex: 100,
+        borderBottom: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {/* Chat History Button (Clock Icon) */}
@@ -408,37 +420,37 @@ const AlthyPage = () => {
           )}
           
           {/* Settings Button */}
-          <button 
+        <button 
             data-settings-button
             onClick={() => setShowSettings(!showSettings)}
-            style={{ 
-              background: 'transparent', 
-              border: 'none', 
-              cursor: 'pointer', 
-              color: '#6b7280',
-              padding: isMobile ? '8px' : '10px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              minWidth: '36px',
-              minHeight: '36px'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = '#f3f4f6';
-              e.target.style.color = '#374151';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.color = '#6b7280';
-            }}
-          >
-            <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            cursor: 'pointer', 
+            color: '#6b7280',
+            padding: isMobile ? '8px' : '10px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            minWidth: '36px',
+            minHeight: '36px'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = '#f3f4f6';
+            e.target.style.color = '#374151';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'transparent';
+            e.target.style.color = '#6b7280';
+          }}
+        >
+          <svg width={isMobile ? "20" : "22"} height={isMobile ? "20" : "22"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.39 1.26 1 1.51.21.09.44.13.67.13H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-            </svg>
-          </button>
+          </svg>
+        </button>
         </div>
       </div>
 
@@ -725,6 +737,7 @@ const AlthyPage = () => {
       {workflowMessage && messages.length === 0 && (
         <div style={{
           margin: '16px',
+          marginTop: '0', // Remove top margin since we have paddingTop on container
           padding: '16px',
           background: '#eff6ff',
           borderRadius: '12px',

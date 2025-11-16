@@ -1,19 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../api';
+import './EventModal.css';
 
-// Event category color palette (same as CalendarPage)
-const EVENT_CATEGORY_COLORS = {
-  'Work': '#6A8FA6',        // Steel Blue
-  'Study': '#E6E6FA',       // Soft Lavender
-  'Personal': '#FFE4D1',    // Peach Tint
-  'Leisure': '#C8F5E1',     // Mint Green
-  'Fitness': '#7CCAC1',     // Fresh Blue-Green
-  'Health': '#FFB7A8',      // Soft Coral
-  'Travel': '#F6E4A6',      // Light Golden Sand
-  'Rest': '#DDEFF5'         // Misty Light Blue
-};
-
-const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryChange, onClose, onSave }) => {
+const EventModal = ({ event, categories = [], eventCategoryMapping = {}, onCategoryChange, onClose, onSave, mode: initialMode = 'view' }) => {
+  // Build color mapping from categories prop (from calendarCategories.json)
+  const EVENT_CATEGORY_COLORS = useMemo(() => {
+    const colorMap = {};
+    categories.forEach(cat => {
+      // Map by both label (capitalized) and key (lowercase) for compatibility
+      if (cat.label) {
+        colorMap[cat.label] = cat.color;
+      }
+      if (cat.key) {
+        colorMap[cat.key] = cat.color;
+        // Also map capitalized version for backward compatibility
+        const capitalizedKey = cat.key.charAt(0).toUpperCase() + cat.key.slice(1);
+        colorMap[capitalizedKey] = cat.color;
+      }
+    });
+    return colorMap;
+  }, [categories]);
   const [summary, setSummary] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -27,9 +33,19 @@ const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryCh
   const [goals, setGoals] = useState([]);
   const [outlookAuth, setOutlookAuth] = useState({ authorized: false });
   const [createInOutlook, setCreateInOutlook] = useState(false);
+  const [mode, setMode] = useState(initialMode); // 'view' or 'edit'
   
   // Check if event is from Outlook (read-only)
   const isOutlookEvent = event?.source === 'outlook';
+  
+  // If no event, default to edit mode (for creating new events)
+  useEffect(() => {
+    if (!event) {
+      setMode('edit');
+    } else {
+      setMode(initialMode);
+    }
+  }, [event, initialMode]);
 
   const repeatOptions = [
     { value: 'none', label: 'Does not repeat' },
@@ -251,15 +267,56 @@ const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryCh
           marginBottom: '8px'
         }}>
           <div style={{ flex: 1 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '4px'
+            }}>
             <h2 style={{
               margin: 0,
               fontSize: isMobile ? '20px' : '24px',
               fontWeight: '600',
-              color: '#1f2937',
-              marginBottom: '4px'
+                color: '#1f2937'
             }}>
-              {isOutlookEvent ? 'Outlook Calendar Event' : event?.id ? 'Edit Event' : 'Add to Plan'}
+                {isOutlookEvent ? 'Outlook Calendar Event' : event?.id ? (mode === 'view' ? 'Event Details' : 'Edit Event') : 'Add to Plan'}
             </h2>
+              {event?.id && mode === 'view' && !isOutlookEvent && (
+                <button
+                  onClick={() => setMode('edit')}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    width: '36px',
+                    height: '36px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background = '#f9fafb';
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.color = '#3b82f6';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background = 'transparent';
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.color = '#6b7280';
+                  }}
+                  title="Edit event"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              )}
+            </div>
             {isOutlookEvent && (
               <p style={{
                 margin: 0,
@@ -304,6 +361,267 @@ const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryCh
           </button>
         </div>
 
+        {mode === 'view' && event?.id ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '24px' }}>
+            {/* View Mode - Display Event Details */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                Event
+              </label>
+              <div style={{
+                padding: '12px 16px',
+                background: '#f9fafb',
+                borderRadius: '8px',
+                fontSize: '16px',
+                color: '#1f2937'
+              }}>
+                {summary || 'No title'}
+              </div>
+            </div>
+
+            {category && (
+              <div>
+                <label className="category-label">
+                  Category
+                </label>
+                <div className="category-display">
+                  {category && (() => {
+                    const selectedCategory = categories.find(c => c.key === category || c.label === category);
+                    const color = selectedCategory?.color || EVENT_CATEGORY_COLORS[category];
+                    const label = selectedCategory?.label || category;
+                    return color ? (
+                      <>
+                        <div 
+                          className="category-display-color"
+                          style={{ background: color }}
+                        />
+                        <span>{label}</span>
+                      </>
+                    ) : (
+                      <span>{label}</span>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                When?
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {date && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '13px',
+                      fontWeight: '400',
+                      color: '#6b7280'
+                    }}>
+                      Date
+                    </label>
+                    <div style={{
+                      padding: '12px 16px',
+                      background: '#f9fafb',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      color: '#1f2937'
+                    }}>
+                      {new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </div>
+                  </div>
+                )}
+                {startTime && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '13px',
+                      fontWeight: '400',
+                      color: '#6b7280'
+                    }}>
+                      Start Time
+                    </label>
+                    <div style={{
+                      padding: '12px 16px',
+                      background: '#f9fafb',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      color: '#1f2937'
+                    }}>
+                      {new Date(`${date}T${startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </div>
+                  </div>
+                )}
+                {endTime && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '13px',
+                      fontWeight: '400',
+                      color: '#6b7280'
+                    }}>
+                      End Time
+                    </label>
+                    <div style={{
+                      padding: '12px 16px',
+                      background: '#f9fafb',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      color: '#1f2937'
+                    }}>
+                      {new Date(`${date}T${endTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {repeat && repeat !== 'none' && (
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}>
+                  Repeat
+                </label>
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  color: '#1f2937'
+                }}>
+                  {repeatOptions.find(opt => opt.value === repeat)?.label || repeat}
+                </div>
+              </div>
+            )}
+
+            {linkedGoal && (
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}>
+                  Linked Goal
+                </label>
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  color: '#1f2937'
+                }}>
+                  {goals.find(g => g.id.toString() === linkedGoal)?.title || linkedGoal}
+                </div>
+              </div>
+            )}
+
+            {notes && (
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}>
+                  Notes
+                </label>
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  color: '#1f2937',
+                  whiteSpace: 'pre-wrap',
+                  minHeight: '60px'
+                }}>
+                  {notes || 'No notes'}
+                </div>
+              </div>
+            )}
+
+            {/* Buttons for View Mode */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginTop: '8px',
+              paddingTop: '16px'
+            }}>
+              {!isOutlookEvent && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  style={{
+                    flex: 1,
+                    padding: '12px 24px',
+                    border: '1px solid #dc2626',
+                    borderRadius: '8px',
+                    background: 'white',
+                    color: '#dc2626',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background = '#fef2f2';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background = 'white';
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  background: 'white',
+                  color: '#374151',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = '#f9fafb';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'white';
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '24px' }}>
             {/* What are you planning? */}
@@ -342,25 +660,15 @@ const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryCh
 
             {/* Category */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#374151'
-              }}>
+              <label className="category-label">
                 Category
-                <span style={{
-                  fontSize: '12px',
-                  fontWeight: '400',
-                  color: '#6b7280',
-                  marginLeft: '8px'
-                }}>
+                <span className="category-label-hint">
                   (affects event color)
                 </span>
               </label>
-              <div style={{ position: 'relative' }}>
+              <div className="category-select-wrapper">
                 <select
+                  className="category-select"
                   value={category}
                   onChange={(e) => {
                     const newCategory = e.target.value;
@@ -373,54 +681,26 @@ const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryCh
                       }
                     }
                   }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 36px 12px 16px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    background: 'white',
-                    boxSizing: 'border-box',
-                    appearance: 'none',
-                    cursor: 'pointer'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                  disabled={isOutlookEvent}
                 >
                   <option value="">Choose a category</option>
-                  {Object.keys(EVENT_CATEGORY_COLORS).map((catName) => (
-                    <option key={catName} value={catName}>
-                      {catName}
-                    </option>
-                  ))}
-                  {categories.filter(cat => !Object.keys(EVENT_CATEGORY_COLORS).includes(cat.label)).map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat.key} value={cat.key}>
                       {cat.label}
                     </option>
                   ))}
                 </select>
-                {category && EVENT_CATEGORY_COLORS[category] && (
-                  <div style={{
-                    position: 'absolute',
-                    right: '40px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '4px',
-                    background: EVENT_CATEGORY_COLORS[category],
-                    border: '1px solid rgba(0,0,0,0.1)'
-                  }} />
-                )}
-                <div style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                  color: '#6b7280'
-                }}>
+                {category && (() => {
+                  const selectedCategory = categories.find(c => c.key === category || c.label === category);
+                  const color = selectedCategory?.color || EVENT_CATEGORY_COLORS[category];
+                  return color ? (
+                    <div 
+                      className="category-color-indicator"
+                      style={{ background: color }}
+                    />
+                  ) : null;
+                })()}
+                <div className="category-select-arrow">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
@@ -897,6 +1177,7 @@ const EventModal = ({ event, categories, eventCategoryMapping = {}, onCategoryCh
             </div>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
