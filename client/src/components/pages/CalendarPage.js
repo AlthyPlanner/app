@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, API_BASE } from '../../api';
 import EventModal from '../modals/EventModal';
+import TaskModal from '../modals/TaskModal';
 import { calculateDailyStatus } from '../../utils/balanceTracker';
 import './CalendarPage.css';
 
@@ -77,6 +78,8 @@ const CalendarPage = () => {
   const [categories, setCategories] = useState([]);
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('day'); // 'day' or 'week'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -92,6 +95,7 @@ const CalendarPage = () => {
   const [eventCategoryMapping, setEventCategoryMapping] = useState(getEventCategoryMapping());
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [expandedDayIndex, setExpandedDayIndex] = useState(null); // For week view: which day column is expanded
 
   useEffect(() => {
     const handleResize = () => {
@@ -259,6 +263,12 @@ const CalendarPage = () => {
     return category?.color || '#3b82f6';
   };
 
+  // Helper function to determine text color based on background color
+  const getTextColorForBackground = (backgroundColor) => {
+    // All categories use black text for consistency
+    return '#333';
+  };
+
   const getEventColor = (event) => {
     // If event has a color from shared calendar, use it
     if (event.color) {
@@ -365,15 +375,23 @@ const CalendarPage = () => {
 
     // Filter todos with due dates for the selected day
     const dayTodos = todos
-      .filter(todo => !todo.completed && todo.due)
       .filter(todo => {
+        // Only show incomplete tasks with due dates
+        if (todo.completed || !todo.due) return false;
+        
+        // Parse the due date
         const dueDate = new Date(todo.due);
+        if (isNaN(dueDate.getTime())) return false; // Invalid date
+        
+        // Check if the due date matches the current day (accounting for 3am day start)
         return isSameDay(dueDate, currentDate);
       })
       .map(todo => {
         const dueDate = new Date(todo.due);
-        // Set default time to 11am if no time specified
+        // Preserve the time if it exists, otherwise set default to 11am
+        if (dueDate.getHours() === 0 && dueDate.getMinutes() === 0) {
         dueDate.setHours(11, 0, 0, 0);
+        }
         return {
           ...todo,
           type: 'task',
@@ -487,14 +505,23 @@ const CalendarPage = () => {
 
     // Filter todos with due dates for the week
     const weekTodos = todos
-      .filter(todo => !todo.completed && todo.due)
       .filter(todo => {
+        // Only show incomplete tasks with due dates
+        if (todo.completed || !todo.due) return false;
+        
+        // Parse the due date
         const dueDate = new Date(todo.due);
+        if (isNaN(dueDate.getTime())) return false; // Invalid date
+        
+        // Check if the due date is within the week range
         return dueDate >= weekStart && dueDate < weekEnd;
       })
       .map(todo => {
         const dueDate = new Date(todo.due);
+        // Preserve the time if it exists, otherwise set default to 11am
+        if (dueDate.getHours() === 0 && dueDate.getMinutes() === 0) {
         dueDate.setHours(11, 0, 0, 0);
+        }
         return {
           ...todo,
           type: 'task',
@@ -715,18 +742,66 @@ const CalendarPage = () => {
                 const height = getEventHeight(item.startTime, item.endTime);
                 const isTask = item.type === 'task';
                 
-                // For tasks, show only a small indicator
+                // For tasks, show as a full event item with text
                 if (isTask) {
+                  const categoryClass = getEventCategoryClass(item);
                       return (
                   <div
                     key={index}
-                      className="task-indicator"
+                      className={`event-item ${categoryClass || ''} task-item`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        // Find the todo by matching text and due date since todos don't have ids
+                        const todo = todos.find(t => {
+                          // Match by text first
+                          if (t.text !== (item.text || item.summary) || t.completed) {
+                            return false;
+                          }
+                          // Match by due date - normalize both to compare just the date/time
+                          if (t.due && item.due) {
+                            const todoDate = new Date(t.due);
+                            const itemDate = new Date(item.due);
+                            // Compare date and time (ignore milliseconds)
+                            return todoDate.getFullYear() === itemDate.getFullYear() &&
+                                   todoDate.getMonth() === itemDate.getMonth() &&
+                                   todoDate.getDate() === itemDate.getDate() &&
+                                   todoDate.getHours() === itemDate.getHours() &&
+                                   todoDate.getMinutes() === itemDate.getMinutes();
+                          }
+                          // If no due dates, match by text only
+                          return !t.due && !item.due;
+                        });
+                        if (todo) {
+                          setSelectedTask(todo);
+                          setShowTaskModal(true);
+                        } else {
+                          console.log('Todo not found. Item:', item, 'Available todos:', todos.slice(0, 3));
+                        }
+                      }}
                       style={{
                         top: `${top}px`,
-                        background: item.color
+                        height: `${Math.max(20, Math.min(height, 24))}px`,
+                        background: categoryClass ? undefined : item.color,
+                        border: categoryClass ? undefined : `2px dashed ${item.color}`,
+                        color: categoryClass ? undefined : getTextColorForBackground(item.color),
+                        cursor: 'pointer'
                       }}
-                      title={item.text || item.summary}
-                    />
+                    >
+                      <div 
+                        className="event-item-text"
+                        style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          fontWeight: '500',
+                          fontSize: '12px',
+                          lineHeight: '1.2'
+                        }}
+                      >
+                        ✓ {item.text || item.summary}
+                      </div>
+                    </div>
                   );
                 }
                 
@@ -752,8 +827,9 @@ const CalendarPage = () => {
                     style={{
                       top: `${top}px`,
                       height: `${height}px`,
-                      background: categoryClass ? undefined : `${item.color}20`,
-                      border: categoryClass ? undefined : `2px solid ${item.color}`
+                      background: categoryClass ? undefined : item.color,
+                      border: categoryClass ? undefined : `2px solid ${item.color}`,
+                      color: categoryClass ? undefined : getTextColorForBackground(item.color)
                     }}
                   >
                     <div 
@@ -783,7 +859,14 @@ const CalendarPage = () => {
         <div className="week-container">
           <div className="week-wrapper">
             {/* Day Headers */}
-            <div className="week-day-headers">
+            <div 
+              className="week-day-headers"
+              style={expandedDayIndex !== null ? {
+                gridTemplateColumns: isMobile 
+                  ? `28px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+                  : `60px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+              } : undefined}
+            >
               <div></div>
               {getWeekDays().map((day, index) => {
                 const isToday = isSameDay(day, new Date());
@@ -804,7 +887,14 @@ const CalendarPage = () => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="week-calendar-grid">
+            <div 
+              className="week-calendar-grid"
+              style={expandedDayIndex !== null ? {
+                gridTemplateColumns: isMobile
+                  ? `28px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+                  : `60px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+              } : undefined}
+            >
               {/* Time Labels */}
               <div className="week-time-labels">
                 {hours.map(hour => (
@@ -829,11 +919,14 @@ const CalendarPage = () => {
                   return eventStart >= dayStart && eventStart <= dayEnd;
                 });
 
+                const isExpanded = expandedDayIndex === dayIndex;
                 return (
                   <div
                     key={dayIndex}
-                    className="week-day-column"
-                    style={{ gridColumn: dayIndex + 2 }}
+                    className={`week-day-column ${isExpanded ? 'week-day-column-expanded' : ''}`}
+                    style={{
+                      gridColumn: dayIndex + 2
+                    }}
                   >
                     {/* Hour Grid Lines */}
                     {hours.map((hour, hourIndex) => (
@@ -873,6 +966,23 @@ const CalendarPage = () => {
                               background: item.color
                             }}
                             title={item.text || item.summary}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Expand this day's column and show task details
+                              // Find the todo by matching text and due date since todos don't have ids
+                              const todo = todos.find(t => {
+                                const todoDue = t.due ? new Date(t.due).toISOString() : null;
+                                const itemDue = item.due ? new Date(item.due).toISOString() : null;
+                                return t.text === (item.text || item.summary) && 
+                                       todoDue === itemDue &&
+                                       !t.completed;
+                              });
+                              if (todo) {
+                                setSelectedTask(todo);
+                                setExpandedDayIndex(dayIndex);
+                                setShowTaskModal(true);
+                              }
+                            }}
                           />
                         );
                       }
@@ -899,8 +1009,9 @@ const CalendarPage = () => {
                           style={{
                             top: `${top}px`,
                             height: `${height}px`,
-                            background: categoryClass ? undefined : `${item.color}25`,
-                            border: categoryClass ? undefined : `1.5px solid ${item.color}`
+                            background: categoryClass ? undefined : item.color,
+                            border: categoryClass ? undefined : `1.5px solid ${item.color}`,
+                            color: categoryClass ? undefined : getTextColorForBackground(item.color)
                           }}
                         >
                           <div 
@@ -992,6 +1103,24 @@ const CalendarPage = () => {
           onSave={() => {
             setShowEventModal(false);
             setSelectedEvent(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {/* Task Modal */}
+      {showTaskModal && (
+        <TaskModal
+          task={selectedTask}
+          mode={selectedTask ? 'view' : 'edit'}
+          onClose={() => {
+            setShowTaskModal(false);
+            setSelectedTask(null);
+          }}
+          onSave={() => {
+            setShowTaskModal(false);
+            setSelectedTask(null);
+            // Reload data to show the newly created task
             loadData();
           }}
         />

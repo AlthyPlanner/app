@@ -24,10 +24,30 @@
   width: 100%;
   min-height: 100vh;
   background: var(--calendar-bg-white);
+  padding-top: 0; /* Will be set dynamically or via content padding */
+}
+
+.calendar-content {
+  padding-top: 200px; /* Approximate header height, will adjust */
+}
+
+@media (min-width: 768px) {
+  .calendar-content {
+    padding-top: 220px;
+  }
 }
 
 .calendar-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  z-index: 100;
   padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: visible;
+  min-height: auto;
 }
 
 @media (min-width: 768px) {
@@ -224,6 +244,7 @@
   align-items: center;
   gap: 16px;
   margin-bottom: 16px;
+  margin-top: 8px;
 }
 
 .date-display {
@@ -289,12 +310,14 @@
 /* Timeline - Day View */
 .timeline-container {
   padding: 16px;
+  padding-top: 240px; /* Space for fixed header */
   position: relative;
 }
 
 @media (min-width: 768px) {
   .timeline-container {
     padding: 24px;
+    padding-top: 260px; /* Space for fixed header on desktop */
   }
 }
 
@@ -376,7 +399,7 @@
 .event-item-text {
   font-size: 11px;
   font-weight: 400;
-  color: var(--calendar-text-primary);
+  color: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
@@ -391,6 +414,43 @@
 }
 
 /* Task Indicator */
+/* Task items in day view - more prominent */
+.task-item {
+  border-left-width: 4px !important;
+  padding-left: 10px !important;
+  font-weight: 500;
+  min-height: 20px;
+  max-height: 24px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+
+  z-index: 3;
+  position: relative;
+}
+
+.task-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 5;
+}
+
+.task-item .event-item-text {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  pointer-events: none;
+}
+
+/* Keep small indicator for week view */
 .task-indicator {
   position: absolute;
   left: 4px;
@@ -400,12 +460,19 @@
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   z-index: 10;
-  cursor: default;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.task-indicator:hover {
+  transform: scale(1.3);
+  z-index: 15;
 }
 
 /* Week View */
 .week-container {
   padding: 8px 4px;
+  padding-top: 280px; /* Space for fixed header + day headers */
   overflow-x: auto;
   width: 100%;
   -webkit-overflow-scrolling: touch;
@@ -414,6 +481,7 @@
 @media (min-width: 768px) {
   .week-container {
     padding: 24px;
+    padding-top: 300px; /* Space for fixed header + day headers on desktop */
     overflow-x: auto;
   }
 }
@@ -433,23 +501,23 @@
 /* Week Day Headers */
 .week-day-headers {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1px;
-  margin-bottom: 8px;
-  position: sticky;
-  top: 0;
+  grid-template-columns: 28px 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  border-bottom: 2px solid var(--calendar-border-light);
   background: var(--calendar-bg-white);
-  z-index: 10;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--calendar-border);
-  width: 100%;
-  box-sizing: border-box;
+  position: fixed;
+  z-index: 99;
+  top: 210px; /* Position below calendar-header */
+  left: 0;
+  right: 0;
+  padding: 0 16px;
 }
 
 @media (min-width: 768px) {
   .week-day-headers {
     grid-template-columns: 60px 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
     gap: 8px;
+    top: 240px; /* Position below calendar-header on desktop */
+    padding: 0 24px;
   }
 }
 
@@ -580,6 +648,12 @@
   border-right: 1px solid var(--calendar-border);
   overflow: visible;
   min-width: 0;
+  transition: all 0.3s ease;
+}
+
+.week-day-column-expanded {
+  background: rgba(106, 143, 166, 0.02);
+  border-right: 2px solid #6A8FA6;
 }
 
 @media (min-width: 768px) {
@@ -644,7 +718,7 @@
 .week-event-item-text {
   font-size: 10px;
   font-weight: 400;
-  color: #111827;
+  color: inherit;
   line-height: 1.1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -653,7 +727,6 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   flex: 1;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 @media (min-width: 768px) {
@@ -685,7 +758,13 @@
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   z-index: 10;
-  cursor: default;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.week-task-indicator:hover {
+  transform: scale(1.5);
+  z-index: 15;
 }
 
 @media (min-width: 768px) {
@@ -879,76 +958,95 @@
 }
 
 /* Event Category Colors */
+/* Event category colors - matching calendarCategories.json */
 .event-color-work {
-  background: #6A8FA620;
-  border-color: #6A8FA6;
+  background: #6A8FA6; /* Work - Steel Blue #6A8FA6 */
+  border-color: #5a7f96;
+  color: #333;
+}
+
+.event-color-work .event-item-text,
+.event-color-work .week-event-item-text {
+  color: white !important;
+  font-weight: 400;
+  text-shadow: none !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .event-color-study {
-  background: #E6E6FA20;
-  border-color: #E6E6FA;
+  background: #E6E6FA; /* Study - Soft Lavender #E6E6FA */
+  border-color: #d6d6ea;
+  color: #333;
 }
 
 .event-color-personal {
-  background: #FFE4D120;
-  border-color: #FFE4D1;
+  background: #FFE4D1; /* Personal - Peach Tint #FFE4D1 */
+  border-color: #efd4c1;
+  color: #333;
 }
 
 .event-color-leisure {
-  background: #C8F5E120;
-  border-color: #C8F5E1;
+  background: #C8F5E1; /* Leisure - Mint Green #C8F5E1 */
+  border-color: #b8e5d1;
+  color: #333;
 }
 
 .event-color-fitness {
-  background: #7CCAC120;
-  border-color: #7CCAC1;
+  background: #7CCAC1; /* Fitness - Fresh Blue-Green #7CCAC1 */
+  border-color: #6cbaa1;
+  color: white;
 }
 
 .event-color-health {
-  background: #FFB7A820;
-  border-color: #FFB7A8;
+  background: #FFB7A8; /* Health - Soft Coral #FFB7A8 */
+  border-color: #efa798;
+  color: #333;
 }
 
 .event-color-travel {
-  background: #F6E4A620;
-  border-color: #F6E4A6;
+  background: #F6E4A6; /* Travel - Light Golden Sand #F6E4A6 */
+  border-color: #e6d496;
+  color: #333;
 }
 
 .event-color-rest {
-  background: #DDEFF520;
-  border-color: #DDEFF5;
+  background: #DDEFF5; /* Rest - Misty Light Blue #DDEFF5 */
+  border-color: #cddfe5;
+  color: #333;
 }
 
+/* Hover states for event category colors */
 .event-color-work:hover {
-  background: #6A8FA630;
+  background: #5a7f96;
 }
 
 .event-color-study:hover {
-  background: #E6E6FA30;
+  background: #d6d6ea;
 }
 
 .event-color-personal:hover {
-  background: #FFE4D130;
+  background: #efd4c1;
 }
 
 .event-color-leisure:hover {
-  background: #C8F5E130;
+  background: #b8e5d1;
 }
 
 .event-color-fitness:hover {
-  background: #7CCAC130;
+  background: #6cbaa1;
 }
 
 .event-color-health:hover {
-  background: #FFB7A830;
+  background: #efa798;
 }
 
 .event-color-travel:hover {
-  background: #F6E4A630;
+  background: #e6d496;
 }
 
 .event-color-rest:hover {
-  background: #DDEFF530;
+  background: #cddfe5;
 }
 
 /* Utility Classes */

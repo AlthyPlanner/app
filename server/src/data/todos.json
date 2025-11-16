@@ -438,5 +438,25 @@
     "goal": null,
     "status": null,
     "priority": "none"
+  },
+  {
+    "text": "New task",
+    "completed": false,
+    "due": "2025-11-16T16:37",
+    "type": "",
+    "category": "work",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "New Task 2",
+    "completed": false,
+    "due": "2025-11-16T18:58",
+    "type": "",
+    "category": "leisure",
+    "goal": null,
+    "status": null,
+    "priority": "none"
   }
 ]

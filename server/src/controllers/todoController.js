@@ -32,13 +32,13 @@ const todoController = {
   async updateTodo(req, res) {
     try {
       const { index } = req.params;
-      const { todo, due, type, category, goal, priority } = req.body;
+      const { todo, due, type, category, goal, priority, status } = req.body;
       
       if (!todo || !todo.trim()) {
         return res.status(400).json({ error: 'Todo text is required' });
       }
       
-      const updatedTodo = await Todo.update(parseInt(index), { todo, due, type, category, goal, priority });
+      const updatedTodo = await Todo.update(parseInt(index), { todo, due, type, category, goal, priority, status });
       res.json({ message: 'Todo updated successfully', todo: updatedTodo });
     } catch (error) {
       if (error.message === 'Todo not found') {
