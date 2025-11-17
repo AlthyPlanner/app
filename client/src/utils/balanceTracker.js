@@ -138,46 +138,50 @@ export const getSleepHours = (date) => {
 // Calculate daily status
 export const calculateDailyStatus = (events, todos, date, sleepHours = null) => {
   const categoryHours = calculateDailyBalance(events, todos, date);
-  const overloaded = isOverloaded(categoryHours);
   
-  // Check sleep
-  const lowSleep = sleepHours !== null && sleepHours < 6;
+  // Check if there are any events in the calendar for this day
+  const dayStart = new Date(date);
+  dayStart.setHours(3, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  dayEnd.setHours(2, 59, 59, 999);
   
-  // Check rest/leisure
-  const noRestLeisure = (categoryHours[CATEGORIES.REST] || 0) + (categoryHours[CATEGORIES.LEISURE] || 0) === 0;
+  const hasEvents = events.some(event => {
+    const eventStart = new Date(event.start);
+    const eventEnd = new Date(event.end);
+    return eventStart < dayEnd && eventEnd > dayStart;
+  });
   
-  if (overloaded || lowSleep) {
+  const hasTodos = todos.some(todo => {
+    if (todo.completed || !todo.due) return false;
+    const dueDate = new Date(todo.due);
+    return dueDate >= dayStart && dueDate < dayEnd;
+  });
+  
+  // If no events or todos, return gray/default status
+  if (!hasEvents && !hasTodos) {
+    return {
+      status: 'default',
+      color: '#9ca3af',
+      icon: '⚪',
+      message: null
+    };
+  }
+  
+  // Calculate Work + Study hours
+  const workStudyHours = (categoryHours[CATEGORIES.WORK] || 0) + (categoryHours[CATEGORIES.STUDY] || 0);
+  
+  // If Work + Study >= 10 hours/day → Overloaded
+  if (workStudyHours >= 10) {
     return {
       status: 'overloaded',
       color: '#dc2626',
       icon: '🔴',
-      message: overloaded 
-        ? "That's a full day — want to keep some buffer time?"
-        : "Looks like you slept less than usual — want a lighter plan today?"
+      message: "That's a full day — want to keep some buffer time?"
     };
   }
   
-  // Check if approaching overload (work + study >= 8 hours)
-  const workStudyHours = (categoryHours[CATEGORIES.WORK] || 0) + (categoryHours[CATEGORIES.STUDY] || 0);
-  if (workStudyHours >= 8) {
-    return {
-      status: 'busy',
-      color: '#f59e0b',
-      icon: '🟡',
-      message: "That's quite a lot — want to keep some buffer time?"
-    };
-  }
-  
-  // Check for no rest/leisure in last 3 days
-  if (noRestLeisure && hasNoRestLeisure(events, todos, 3)) {
-    return {
-      status: 'busy',
-      color: '#f59e0b',
-      icon: '🟡',
-      message: "You've been working hard — maybe add some downtime?"
-    };
-  }
-  
+  // Otherwise → Balanced
   return {
     status: 'balanced',
     color: '#10b981',

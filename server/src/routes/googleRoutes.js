@@ -10,7 +10,9 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   // IMPORTANT: Google should redirect back to the backend, not the frontend
   // Full callback path = /api/google/auth/google/callback
-  callbackURL: "http://localhost:5001/api/google/auth/google/callback"
+  callbackURL: "http://localhost:5001/api/google/auth/google/callback",
+  accessType: 'offline',
+  prompt: 'consent'
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     // Store tokens for this user session
@@ -27,6 +29,7 @@ passport.use(new GoogleStrategy({
     
     return done(null, userTokens);
   } catch (error) {
+    console.error('Google OAuth strategy error:', error);
     return done(error, null);
   }
 }));
@@ -43,20 +46,81 @@ passport.deserializeUser((user, done) => {
 // Google OAuth routes
 router.get('/auth/google', 
   passport.authenticate('google', { 
-    scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events'] 
+    scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events'],
+    accessType: 'offline',
+    prompt: 'consent'
   })
 );
 
-router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3001/app/plan?error=auth_failed' }),
+router.get('/auth/google/callback', (req, res, next) => {
+    console.log('OAuth callback route hit:', {
+      query: req.query,
+      params: req.params,
+      url: req.url,
+      method: req.method
+    });
+    next();
+  },
+  (req, res, next) => {
+    passport.authenticate('google', (err, user, info) => {
+      console.log('Passport authenticate result:', {
+        hasError: !!err,
+        error: err?.message,
+        hasUser: !!user,
+        userEmail: user?.profile?.email,
+        info: info
+      });
+      
+      if (err) {
+        console.error('Passport authentication error:', err);
+        return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+      }
+      
+      if (!user) {
+        console.error('Passport authentication failed: no user');
+        return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+      }
+      
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error('Error logging in user:', err);
+          return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+        }
+        
+        console.log('User logged in successfully, proceeding to success handler');
+        next();
+      });
+    })(req, res, next);
+  },
   (req, res) => {
-    // Successful authentication, redirect to frontend plan page with success
-    res.redirect('http://localhost:3001/app/plan?auth=success');
+    // Successful authentication
+    console.log('OAuth callback successful:', {
+      isAuthenticated: req.isAuthenticated(),
+      hasUser: !!req.user,
+      sessionID: req.sessionID
+    });
+    
+    // Save session before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Error saving session:', err);
+        return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+      }
+      // Redirect to frontend plan page with success
+      res.redirect('http://localhost:3001/app/plan?auth=success');
+    });
   }
 );
 
 // Check authentication status
 router.get('/auth/status', (req, res) => {
+  console.log('Auth status check:', {
+    isAuthenticated: req.isAuthenticated(),
+    hasUser: !!req.user,
+    sessionID: req.sessionID,
+    session: req.session
+  });
+  
   if (req.isAuthenticated()) {
     res.json({ 
       authorized: true, 
@@ -78,7 +142,7 @@ router.get('/events', async (req, res) => {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      "http://localhost:3001/auth/google/callback"
+      "http://localhost:5001/api/google/auth/google/callback"
     );
 
     oauth2Client.setCredentials({
@@ -140,7 +204,7 @@ router.post('/events', async (req, res) => {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      "http://localhost:3001/auth/google/callback"
+      "http://localhost:5001/api/google/auth/google/callback"
     );
 
     oauth2Client.setCredentials({

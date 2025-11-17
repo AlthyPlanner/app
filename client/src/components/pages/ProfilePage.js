@@ -79,7 +79,9 @@ const ProfilePage = () => {
 
   const checkGoogleAuth = async () => {
     try {
-      const response = await apiFetch('/api/google/auth/status');
+      const response = await apiFetch('/api/google/auth/status', {
+        credentials: 'include'   // <-- REQUIRED
+      });
       const data = await response.json();
       setGoogleAuth(data);
       if (data.authorized && data.user) {

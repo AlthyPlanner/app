@@ -97,6 +97,30 @@ const CalendarPage = () => {
   const [notificationMessage, setNotificationMessage] = useState('');
   const [expandedDayIndex, setExpandedDayIndex] = useState(null); // For week view: which day column is expanded
 
+  const checkGoogleAuth = async () => {
+    try {
+      const response = await apiFetch('/api/google/auth/status', {
+        credentials: 'include'   // <-- REQUIRED
+      });
+      const data = await response.json();
+      setGoogleAuth(data);
+    } catch (error) {
+      console.error('Failed to check Google auth status:', error);
+    }
+  };
+  
+
+  const checkOutlookAuth = async () => {
+    try {
+      const response = await apiFetch('/api/outlook/auth/status');
+      const data = await response.json();
+      setOutlookAuth(data);
+    } catch (error) {
+      console.error('Failed to check Outlook auth status:', error);
+      setOutlookAuth({ authorized: false, user: null });
+    }
+  };
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -122,22 +146,28 @@ const CalendarPage = () => {
     // Check for OAuth callback parameters
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auth') === 'success') {
-      checkGoogleAuth();
-      setNotificationMessage('Successfully connected to Google Calendar!');
-      setShowNotification(true);
+      // Add a small delay to ensure session is established, then check auth status
+      setTimeout(async () => {
+        await checkGoogleAuth();
+        setNotificationMessage('Successfully connected to Google Calendar!');
+        setShowNotification(true);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setShowNotification(false), 3000);
+      }, 500);
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      // Auto-hide notification after 3 seconds
-      setTimeout(() => setShowNotification(false), 3000);
     }
     if (urlParams.get('outlook_auth') === 'success') {
-      checkOutlookAuth();
-      setNotificationMessage('Successfully connected to Outlook Calendar!');
-      setShowNotification(true);
+      // Add a small delay to ensure session is established, then check auth status
+      setTimeout(async () => {
+        await checkOutlookAuth();
+        setNotificationMessage('Successfully connected to Outlook Calendar!');
+        setShowNotification(true);
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => setShowNotification(false), 3000);
+      }, 500);
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      // Auto-hide notification after 3 seconds
-      setTimeout(() => setShowNotification(false), 3000);
     }
     if (urlParams.get('error') === 'auth_failed') {
       alert('Failed to connect Google Calendar. Please try again.');
@@ -155,37 +185,16 @@ const CalendarPage = () => {
 
   // Calculate daily status when events/todos change
   useEffect(() => {
-    if (events.length > 0 || todos.length > 0) {
-      const today = new Date();
-      const status = calculateDailyStatus(events, todos, today);
-      setDailyStatus(status);
-      // Show status message when a new status is calculated
-      if (status && status.message) {
-        setShowStatusMessage(true);
-      }
+    const today = new Date();
+    const status = calculateDailyStatus(events, todos, today);
+    setDailyStatus(status);
+    // Show status message when a new status is calculated and has a message
+    if (status && status.message) {
+      setShowStatusMessage(true);
+    } else {
+      setShowStatusMessage(false);
     }
   }, [events, todos]);
-
-  const checkOutlookAuth = async () => {
-    try {
-      const response = await apiFetch('/api/outlook/auth/status');
-      const data = await response.json();
-      setOutlookAuth(data);
-    } catch (error) {
-      console.error('Failed to check Outlook auth status:', error);
-      setOutlookAuth({ authorized: false, user: null });
-    }
-  };
-
-    const checkGoogleAuth = async () => {
-      try {
-        const response = await apiFetch('/api/google/auth/status');
-        const data = await response.json();
-        setGoogleAuth(data);
-      } catch (error) {
-        console.error('Failed to check Google auth status:', error);
-      }
-    };
 
   const loadData = async () => {
     try {
@@ -587,7 +596,10 @@ const CalendarPage = () => {
       <div className="calendar-header">
         <div className="calendar-header-top">
           <h1 className="calendar-greeting">
-          {getGreeting()}, {userName} — here's your {viewMode === 'week' ? 'week' : 'day'}.
+          {events.length === 0 && todos.filter(t => !t.completed && t.due).length === 0
+            ? "Add an event or connect to calendar to begin"
+            : `${getGreeting()}, ${userName} — here's your ${viewMode === 'week' ? 'week' : 'day'}.`
+          }
         </h1>
 
           {/* Daily Status Badge */}
@@ -604,7 +616,7 @@ const CalendarPage = () => {
                 className="status-badge-text"
                 style={{ color: dailyStatus.color }}
               >
-                {dailyStatus.status}
+                {dailyStatus.status === 'default' ? 'No Events' : dailyStatus.status.charAt(0).toUpperCase() + dailyStatus.status.slice(1)}
               </span>
             </div>
           )}

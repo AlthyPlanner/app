@@ -17,24 +17,29 @@ const PORT = process.env.PORT || 5001;
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:3001',
+  origin: "http://localhost:3001",
   credentials: true
 }));
 
+// Needed for cookies over cross-origin redirects (OAuth)
+app.set("trust proxy", 1);
+
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: process.env.SESSION_SECRET || "your-secret-key",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Set to true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    httpOnly: true,
+    secure: false,        // must be false for localhost http
+    sameSite: "lax",    // for HTTP
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
-// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
+
 
 // Routes
 app.use('/api/todos', todoRoutes);

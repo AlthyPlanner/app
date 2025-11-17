@@ -12,7 +12,7 @@
   {
     "text": "Update project documentation",
     "completed": true,
-    "due": "2025-11-13T16:00:00",
+    "due": "2025-11-23T16:00:00.000Z",
     "type": "Work",
     "category": "work",
     "goal": null,
@@ -22,7 +22,7 @@
   {
     "text": "Review project proposal",
     "completed": true,
-    "due": "2025-11-14T10:00:00",
+    "due": "2025-11-23T10:00:00.000Z",
     "type": "Work",
     "category": "work",
     "goal": null,
@@ -42,7 +42,7 @@
   {
     "text": "Gym workout",
     "completed": true,
-    "due": "2025-11-15T16:00:00.000Z",
+    "due": "2025-11-23T16:00:00.000Z",
     "type": "Fitness",
     "category": "fitness",
     "goal": "3",
@@ -62,7 +62,7 @@
   {
     "text": "Prepare presentation slides",
     "completed": true,
-    "due": "2025-11-16T16:00:00",
+    "due": "2025-11-23T16:00:00.000Z",
     "type": "Work",
     "category": "work",
     "goal": null,
@@ -312,7 +312,7 @@
   {
     "text": "running 1 mile",
     "completed": false,
-    "due": "2022-12-15",
+    "due": "2025-11-23",
     "type": "",
     "category": "fitness",
     "goal": null,
@@ -322,7 +322,7 @@
   {
     "text": "running 1 mile",
     "completed": false,
-    "due": "2022-03-10",
+    "due": "2025-11-23",
     "type": "",
     "category": "fitness",
     "goal": null,
@@ -332,49 +332,9 @@
   {
     "text": "running 1 mile",
     "completed": false,
-    "due": "2022-01-26",
+    "due": "2025-11-23",
     "type": "",
     "category": "fitness",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "Add a task",
-    "completed": false,
-    "due": null,
-    "type": "",
-    "category": "",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "adding a task",
-    "completed": false,
-    "due": null,
-    "type": "",
-    "category": "",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "add a task",
-    "completed": false,
-    "due": null,
-    "type": "",
-    "category": "",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "add task",
-    "completed": false,
-    "due": null,
-    "type": "",
-    "category": "",
     "goal": null,
     "status": null,
     "priority": "none"
@@ -382,47 +342,7 @@
   {
     "text": "run 1 mile",
     "completed": false,
-    "due": "null",
-    "type": "",
-    "category": "fitness",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "Add task",
-    "completed": false,
     "due": null,
-    "type": "",
-    "category": "",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "add task",
-    "completed": false,
-    "due": null,
-    "type": "",
-    "category": "",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "add task",
-    "completed": false,
-    "due": null,
-    "type": "",
-    "category": "",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "running 1 mile",
-    "completed": false,
-    "due": "2024-12-15",
     "type": "",
     "category": "fitness",
     "goal": null,
@@ -432,7 +352,7 @@
   {
     "text": "running 1 mile",
     "completed": false,
-    "due": "2022-11-09",
+    "due": "2025-11-23",
     "type": "",
     "category": "fitness",
     "goal": null,
@@ -440,21 +360,11 @@
     "priority": "none"
   },
   {
-    "text": "New task",
+    "text": "running 1 mile",
     "completed": false,
-    "due": "2025-11-16T16:37",
+    "due": "2025-11-23",
     "type": "",
-    "category": "work",
-    "goal": null,
-    "status": null,
-    "priority": "none"
-  },
-  {
-    "text": "New Task 2",
-    "completed": false,
-    "due": "2025-11-16T18:58",
-    "type": "",
-    "category": "leisure",
+    "category": "fitness",
     "goal": null,
     "status": null,
     "priority": "none"
