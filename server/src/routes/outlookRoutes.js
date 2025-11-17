@@ -10,26 +10,30 @@ if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
     auth: {
       clientId: process.env.OUTLOOK_CLIENT_ID,
       clientSecret: process.env.OUTLOOK_CLIENT_SECRET,
-      authority: 'https://login.microsoftonline.com/common'
+      authority: 'https://login.microsoftonline.com/common' // Supports both personal and work accounts
     }
   };
-  pca = new ConfidentialClientApplication(msalConfig);
+  
+  console.log('Initializing MSAL with Client ID:', process.env.OUTLOOK_CLIENT_ID);
+  console.log('Client Secret length:', process.env.OUTLOOK_CLIENT_SECRET?.length || 0);
+  
+  try {
+    pca = new ConfidentialClientApplication(msalConfig);
+    console.log('MSAL initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize MSAL:', error);
+  }
 }
 
 // Helper function to get Microsoft Graph client
 function getGraphClient(accessToken) {
-  // Create an authentication provider
-  const authProvider = {
-    getAccessToken: async () => {
-      return accessToken;
-    }
-  };
-  
-  // Initialize the Graph client
   return Client.init({
-    authProvider: authProvider
+    authProvider: (done) => {
+      done(null, accessToken);
+    }
   });
 }
+
 
 // Initiate OAuth flow
 router.get('/auth/microsoft', async (req, res) => {
@@ -37,38 +41,70 @@ router.get('/auth/microsoft', async (req, res) => {
     return res.status(503).json({ error: 'Outlook Calendar integration is not configured' });
   }
   try {
+    const redirectUri = process.env.OUTLOOK_REDIRECT_URI || 'http://localhost:5001/api/outlook/auth/microsoft/callback';
+    
+    console.log('Initiating Outlook OAuth flow with:');
+    console.log('- Client ID:', process.env.OUTLOOK_CLIENT_ID);
+    console.log('- Redirect URI:', redirectUri);
+    console.log('- Authority:', 'https://login.microsoftonline.com/common');
+    
     const authCodeUrlParameters = {
       scopes: ['User.Read', 'Calendars.Read', 'Calendars.ReadWrite'],
-      redirectUri: process.env.OUTLOOK_REDIRECT_URI || 'http://localhost:5001/api/outlook/auth/microsoft/callback'
+      redirectUri: redirectUri,
+      prompt: 'select_account' // Force account selection
     };
 
     const authUrl = await pca.getAuthCodeUrl(authCodeUrlParameters);
+    console.log('Generated auth URL:', authUrl.substring(0, 100) + '...');
     res.redirect(authUrl);
   } catch (error) {
     console.error('Error initiating Outlook auth:', error);
-    res.redirect(`http://localhost:3001/app/profile?error=outlook_auth_failed`);
+    console.error('Error details:', error.message, error.stack);
+    res.redirect(`http://localhost:3001/app/profile?error=outlook_auth_failed&details=${encodeURIComponent(error.message)}`);
   }
+});
+
+// Test endpoint to verify configuration
+router.get('/test', (req, res) => {
+  res.json({
+    configured: !!pca,
+    clientId: process.env.OUTLOOK_CLIENT_ID || 'NOT SET',
+    clientSecretSet: !!process.env.OUTLOOK_CLIENT_SECRET,
+    redirectUri: process.env.OUTLOOK_REDIRECT_URI || 'NOT SET',
+    authority: 'https://login.microsoftonline.com/common'
+  });
 });
 
 // OAuth callback
 router.get('/auth/microsoft/callback', async (req, res) => {
   if (!pca) {
+    console.error('MSAL not initialized in callback');
     return res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed');
   }
   try {
-    const { code } = req.query;
+    const { code, error, error_description } = req.query;
+    
+    if (error) {
+      console.error('OAuth error in callback:', error, error_description);
+      return res.redirect(`http://localhost:3001/app/profile?error=outlook_auth_failed&details=${encodeURIComponent(error_description || error)}`);
+    }
     
     if (!code) {
-      return res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed');
+      console.error('No authorization code in callback');
+      return res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed&details=no_code');
     }
+
+    const redirectUri = process.env.OUTLOOK_REDIRECT_URI || 'http://localhost:5001/api/outlook/auth/microsoft/callback';
+    console.log('Exchanging code for token with redirect URI:', redirectUri);
 
     const tokenRequest = {
       code: code,
       scopes: ['User.Read', 'Calendars.Read', 'Calendars.ReadWrite'],
-      redirectUri: process.env.OUTLOOK_REDIRECT_URI || 'http://localhost:5001/api/outlook/auth/microsoft/callback'
+      redirectUri: redirectUri
     };
 
     const response = await pca.acquireTokenByCode(tokenRequest);
+    console.log('Token acquired successfully');
     
     // Store tokens in session
     req.session.outlookTokens = {

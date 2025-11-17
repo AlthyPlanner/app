@@ -11,12 +11,14 @@
 2. **Environment Variables**
    Add to your `.env` file in the server directory:
    ```
-   OUTLOOK_CLIENT_ID=your_outlook_client_id_here
-   OUTLOOK_CLIENT_SECRET=your_outlook_client_secret_here
+   OUTLOOK_CLIENT_ID=6f156cf4-ebd9-43f9-92ee-7363afab10bb
+   OUTLOOK_CLIENT_SECRET=b7j8Q~klGwg2ddpJkxteKfaKuMjIFY8l_4~ASap7
    OUTLOOK_REDIRECT_URI=http://localhost:5001/api/outlook/auth/microsoft/callback
    SESSION_SECRET=your_session_secret_key_here
    PORT=5001
    ```
+   
+   **Important**: Make sure the redirect URI in Azure Portal matches exactly: `http://localhost:5001/api/outlook/auth/microsoft/callback`
 
 ## Azure Portal Configuration
 
@@ -31,6 +33,7 @@
    - **Redirect URI**: 
      - Platform: Web
      - URL: `http://localhost:5001/api/outlook/auth/microsoft/callback`
+
 5. Click "Register"
 
 ### Step 2: Configure API Permissions
@@ -56,11 +59,15 @@
 6. **Copy the secret value immediately** - it won't be shown again
 7. Add this to your `.env` file as `OUTLOOK_CLIENT_SECRET`
 
-### Step 4: Get Client ID
+
+### Step 4: Get Client ID and Configuration Details
 
 1. In your app registration, go to "Overview"
-2. Copy the "Application (client) ID"
-3. Add this to your `.env` file as `OUTLOOK_CLIENT_ID`
+2. Copy the following IDs:
+   - **Application (client) ID**: `6f156cf4-ebd9-43f9-92ee-7363afab10bb`
+   - **Object ID**: `b26140e3-6d24-4cd2-98fc-cf908a00de08`
+   - **Directory (tenant) ID**: `4a4c27cb-051d-4fa6-bc63-787504a3e041`
+3. Add the Application (client) ID to your `.env` file as `OUTLOOK_CLIENT_ID`
 
 ## Installation Steps
 
@@ -71,14 +78,9 @@
    ```
 
 2. **Set Environment Variables**
-   Update your `.env` file with:
-   ```env
-   OUTLOOK_CLIENT_ID=your_client_id_from_azure
-   OUTLOOK_CLIENT_SECRET=your_client_secret_from_azure
-   OUTLOOK_REDIRECT_URI=http://localhost:5001/api/outlook/auth/microsoft/callback
-   SESSION_SECRET=your_session_secret_key_here
-   PORT=5001
-   ```
+
+   
+   **Note**: The redirect URI must be exactly: `http://localhost:5001/api/outlook/auth/microsoft/callback`
 
 3. **Start the Servers**
    ```bash
@@ -137,9 +139,17 @@
    - Verify API permissions are configured correctly in Azure Portal
    - Ensure admin consent is granted for the permissions
 
-3. **"invalid_client"**
+3. **"invalid_client" or "unauthorized_client"**
    - Verify OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET in `.env`
    - Check that client secret hasn't expired
+   - **"unauthorized_client: The client does not exist or is not enabled for consumers"**:
+     - Go to Azure Portal > App Registrations > Your App > Overview
+     - Check that "Supported account types" is set to **"Accounts in any organizational directory and personal Microsoft accounts"**
+     - If it's set to "Accounts in this organizational directory only", change it to allow personal accounts
+     - Go to "Authentication" > "Platform configurations" > "Web"
+     - Verify the redirect URI matches **exactly**: `http://localhost:5001/api/outlook/auth/microsoft/callback`
+     - Check for trailing slashes, http vs https, and exact casing
+     - Save changes and wait a few minutes for propagation
 
 4. **"Events not loading"**
    - Check browser console for errors
