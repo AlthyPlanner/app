@@ -59,6 +59,46 @@
   background: #f3f4f6;
 }
 
+/* Calendar Connect Button */
+.calendar-connect-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #6A8FA6;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-connect-button:hover {
+  background: #5a7f96;
+}
+
+/* Calendar Icon Container */
+.calendar-icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  padding: 8px;
+}
+
+.calendar-icon-google svg {
+  width: 28px;
+  height: 28px;
+}
+
+.calendar-icon-outlook svg {
+  width: 28px;
+  height: 28px;
+}
+
 /* Media Queries */
 @media (min-width: 768px) {
   .notification-modal {

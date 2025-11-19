@@ -83,6 +83,7 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('day'); // 'day' or 'week'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showTasks, setShowTasks] = useState(true); // Toggle for showing/hiding tasks
   const [googleAuth, setGoogleAuth] = useState({ authorized: false, user: null });
   const [outlookAuth, setOutlookAuth] = useState({ authorized: false, user: null });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -620,6 +621,7 @@ const CalendarPage = () => {
               </span>
             </div>
           )}
+
         </div>
 
         {/* Daily Status Message */}
@@ -676,6 +678,15 @@ const CalendarPage = () => {
               </select>
           </div>
         )}
+
+          {/* Show/Hide Todos Toggle */}
+          <button
+            onClick={() => setShowTasks(!showTasks)}
+            className="tasks-toggle-button"
+            title={showTasks ? 'Hide todos' : 'Show todos'}
+          >
+            {showTasks ? 'Hide Todos' : 'Show Todos'}
+          </button>
         </div>
 
         {/* Date Navigation */}
@@ -755,12 +766,23 @@ const CalendarPage = () => {
                 const isTask = item.type === 'task';
                 
                 // For tasks, show as a full event item with text
+                if (isTask && !showTasks) {
+                  return null; // Hide task if toggle is off
+                }
                 if (isTask) {
                   const categoryClass = getEventCategoryClass(item);
+                  // Helper function to convert hex to rgba
+                  const hexToRgba = (hex, alpha) => {
+                    if (!hex || !hex.startsWith('#')) return `rgba(128, 128, 128, ${alpha})`;
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                  };
                       return (
                   <div
                     key={index}
-                      className={`event-item ${categoryClass || ''} task-item`}
+                      className={`event-item ${categoryClass || ''} task-item ${!categoryClass ? 'task-item-static task-item-border' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -794,23 +816,13 @@ const CalendarPage = () => {
                       style={{
                         top: `${top}px`,
                         height: `${Math.max(20, Math.min(height, 24))}px`,
-                        background: categoryClass ? undefined : item.color,
-                        border: categoryClass ? undefined : `2px dashed ${item.color}`,
-                        color: categoryClass ? undefined : getTextColorForBackground(item.color),
-                        cursor: 'pointer'
+                        ...(categoryClass ? {} : { 
+                          background: 'white',
+                          borderColor: item.color || '#999'
+                        })
                       }}
                     >
-                      <div 
-                        className="event-item-text"
-                        style={{
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          fontWeight: '500',
-                          fontSize: '12px',
-                          lineHeight: '1.2'
-                        }}
-                      >
+                      <div className="event-item-text">
                         ✓ {item.text || item.summary}
                       </div>
                     </div>
@@ -839,17 +851,15 @@ const CalendarPage = () => {
                     style={{
                       top: `${top}px`,
                       height: `${height}px`,
-                      background: categoryClass ? undefined : item.color,
-                      border: categoryClass ? undefined : `2px solid ${item.color}`,
-                      color: categoryClass ? undefined : getTextColorForBackground(item.color)
+                      ...(categoryClass ? {} : {
+                        background: item.color,
+                        border: `2px solid ${item.color}`,
+                        color: getTextColorForBackground(item.color)
+                      })
                     }}
                   >
                     <div 
-                      className="event-item-text"
-                      style={{
-                        whiteSpace: height > 30 ? 'normal' : 'nowrap',
-                        maxHeight: height > 30 ? 'none' : '14px'
-                      }}
+                      className={`event-item-text ${height > 30 ? 'event-item-text-multiline' : 'event-item-text-single'}`}
                     >
                       {item.summary || item.text}
                       {item.sharedCalendarName && (
@@ -967,20 +977,34 @@ const CalendarPage = () => {
                       const isTask = item.type === 'task';
                       const eventText = item.summary || item.text || '';
                       
-                      // For tasks, show only a small indicator
+                      // For tasks, show as full-width item
+                      if (isTask && !showTasks) {
+                        return null; // Hide task if toggle is off
+                      }
                       if (isTask) {
-                      return (
-                        <div
-                          key={eventIndex}
-                            className="week-task-indicator"
+                        const categoryClass = getEventCategoryClass(item);
+                        // Helper function to convert hex to rgba
+                        const hexToRgba = (hex, alpha) => {
+                          if (!hex || !hex.startsWith('#')) return `rgba(128, 128, 128, ${alpha})`;
+                          const r = parseInt(hex.slice(1, 3), 16);
+                          const g = parseInt(hex.slice(3, 5), 16);
+                          const b = parseInt(hex.slice(5, 7), 16);
+                          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                        };
+                        // Tasks with white background and outlined border
+                        return (
+                          <div
+                            key={eventIndex}
+                            className={`week-event-item ${categoryClass || ''} week-task-item ${!categoryClass ? 'task-item-static task-item-border' : ''}`}
                             style={{
                               top: `${top}px`,
-                              background: item.color
+                              height: '16px',
+                              ...(categoryClass ? {} : { 
+                                borderColor: item.color || '#999'
+                              })
                             }}
-                            title={item.text || item.summary}
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Expand this day's column and show task details
                               // Find the todo by matching text and due date since todos don't have ids
                               const todo = todos.find(t => {
                                 const todoDue = t.due ? new Date(t.due).toISOString() : null;
@@ -991,11 +1015,18 @@ const CalendarPage = () => {
                               });
                               if (todo) {
                                 setSelectedTask(todo);
-                                setExpandedDayIndex(dayIndex);
                                 setShowTaskModal(true);
                               }
                             }}
-                          />
+                          >
+                            <div 
+                              className="week-event-item-text week-task-item-text-container"
+                              title={item.text || item.summary}
+                            >
+                              <span className="week-task-checkmark">✓</span>
+                              <span className="week-task-text">{item.text || item.summary}</span>
+                            </div>
+                          </div>
                         );
                       }
                       
@@ -1021,17 +1052,15 @@ const CalendarPage = () => {
                           style={{
                             top: `${top}px`,
                             height: `${height}px`,
-                            background: categoryClass ? undefined : item.color,
-                            border: categoryClass ? undefined : `1.5px solid ${item.color}`,
-                            color: categoryClass ? undefined : getTextColorForBackground(item.color)
+                            ...(categoryClass ? {} : {
+                              background: item.color,
+                              border: `1.5px solid ${item.color}`,
+                              color: getTextColorForBackground(item.color)
+                            })
                           }}
                         >
                           <div 
-                            className="week-event-item-text"
-                            style={{
-                              whiteSpace: height > (isMobile ? 25 : 30) ? 'normal' : 'nowrap',
-                              WebkitLineClamp: height > (isMobile ? 25 : 30) ? 4 : 3
-                            }}
+                            className={`week-event-item-text ${height > (isMobile ? 25 : 30) ? 'week-event-item-text-multiline' : 'week-event-item-text-single'}`}
                           >
                             {eventText}
                             {item.sharedCalendarName && (

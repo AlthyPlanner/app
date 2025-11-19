@@ -1095,21 +1095,21 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
               padding: '12px 24px',
               borderRadius: '12px',
               border: 'none',
-              background: '#3b82f6',
+              background: '#6A8FA6',
               color: 'white',
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+              boxShadow: '0 2px 4px rgba(106, 143, 166, 0.3)'
             }}
             onMouseOver={(e) => {
-              e.target.style.background = '#2563eb';
-              e.target.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.4)';
+              e.target.style.background = '#5a7f96';
+              e.target.style.boxShadow = '0 4px 8px rgba(106, 143, 166, 0.4)';
             }}
             onMouseOut={(e) => {
-              e.target.style.background = '#3b82f6';
-              e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
+              e.target.style.background = '#6A8FA6';
+              e.target.style.boxShadow = '0 2px 4px rgba(106, 143, 166, 0.3)';
             }}
           >
             Get help from Althy for {getTimePeriodDescription()}

@@ -81,12 +81,12 @@
   },
   {
     "text": "Weekly team review",
-    "completed": false,
+    "completed": true,
     "due": "2025-11-18T11:00:00",
     "type": "Work",
     "category": "work",
     "goal": null,
-    "status": null,
+    "status": "complete",
     "priority": null
   },
   {
@@ -365,6 +365,26 @@
     "due": "2025-11-23",
     "type": "",
     "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "Live Demo!!",
+    "completed": false,
+    "due": "2025-11-17T19:00",
+    "type": "",
+    "category": "personal",
+    "goal": null,
+    "status": null,
+    "priority": "high"
+  },
+  {
+    "text": "pick up a key",
+    "completed": false,
+    "due": "2024-12-15",
+    "type": "",
+    "category": "personal",
     "goal": null,
     "status": null,
     "priority": "none"
