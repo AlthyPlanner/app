@@ -60,7 +60,8 @@ router.get('/auth/microsoft', async (req, res) => {
   } catch (error) {
     console.error('Error initiating Outlook auth:', error);
     console.error('Error details:', error.message, error.stack);
-    res.redirect(`http://localhost:3001/app/profile?error=outlook_auth_failed&details=${encodeURIComponent(error.message)}`);
+    const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+    res.redirect(`${frontendUrl}/app/profile?error=outlook_auth_failed&details=${encodeURIComponent(error.message)}`);
   }
 });
 
@@ -79,19 +80,22 @@ router.get('/test', (req, res) => {
 router.get('/auth/microsoft/callback', async (req, res) => {
   if (!pca) {
     console.error('MSAL not initialized in callback');
-    return res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed');
+    const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+    return res.redirect(`${frontendUrl}/app/profile?error=outlook_auth_failed`);
   }
   try {
     const { code, error, error_description } = req.query;
     
     if (error) {
       console.error('OAuth error in callback:', error, error_description);
-      return res.redirect(`http://localhost:3001/app/profile?error=outlook_auth_failed&details=${encodeURIComponent(error_description || error)}`);
+      const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+      return res.redirect(`${frontendUrl}/app/profile?error=outlook_auth_failed&details=${encodeURIComponent(error_description || error)}`);
     }
     
     if (!code) {
       console.error('No authorization code in callback');
-      return res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed&details=no_code');
+      const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+      return res.redirect(`${frontendUrl}/app/profile?error=outlook_auth_failed&details=no_code`);
     }
 
     const redirectUri = process.env.OUTLOOK_REDIRECT_URI || 'http://localhost:5001/api/outlook/auth/microsoft/callback';
@@ -127,7 +131,8 @@ router.get('/auth/microsoft/callback', async (req, res) => {
       name: user.displayName
     };
 
-    res.redirect('http://localhost:3001/app/profile?outlook_auth=success');
+    const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+    res.redirect(`${frontendUrl}/app/profile?outlook_auth=success`);
   } catch (error) {
     console.error('Error in Outlook callback:', error);
     res.redirect('http://localhost:3001/app/profile?error=outlook_auth_failed');

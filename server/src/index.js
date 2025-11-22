@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5001;
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: "http://localhost:3001",
+  origin: process.env.CLIENT_URL || "http://localhost:3001",
   credentials: true
 }));
 
@@ -31,8 +31,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false,        // must be false for localhost http
-    sameSite: "lax",    // for HTTP
+    secure: process.env.NODE_ENV === 'production',  // true for HTTPS in production
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
@@ -72,6 +72,11 @@ app.use('/api/calendar', calendarRoutes);
 // Basic route
 app.get('/', (req, res) => {
   res.send('Welcome to Todo Planner API!');
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Handle unhandled promise rejections

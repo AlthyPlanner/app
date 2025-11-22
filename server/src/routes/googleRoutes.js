@@ -10,7 +10,9 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   // IMPORTANT: Google should redirect back to the backend, not the frontend
   // Full callback path = /api/google/auth/google/callback
-  callbackURL: "http://localhost:5001/api/google/auth/google/callback",
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || 
+    (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/google/auth/google/callback` : null) ||
+    "http://localhost:5001/api/google/auth/google/callback",
   accessType: 'offline',
   prompt: 'consent'
 }, async (accessToken, refreshToken, profile, done) => {
@@ -73,18 +75,21 @@ router.get('/auth/google/callback', (req, res, next) => {
       
       if (err) {
         console.error('Passport authentication error:', err);
-        return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+        const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+        return res.redirect(`${frontendUrl}/app/plan?error=auth_failed`);
       }
       
       if (!user) {
         console.error('Passport authentication failed: no user');
-        return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+        const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+        return res.redirect(`${frontendUrl}/app/plan?error=auth_failed`);
       }
       
       req.logIn(user, (err) => {
         if (err) {
           console.error('Error logging in user:', err);
-          return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+          const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+          return res.redirect(`${frontendUrl}/app/plan?error=auth_failed`);
         }
         
         console.log('User logged in successfully, proceeding to success handler');
@@ -104,10 +109,12 @@ router.get('/auth/google/callback', (req, res, next) => {
     req.session.save((err) => {
       if (err) {
         console.error('Error saving session:', err);
-        return res.redirect('http://localhost:3001/app/plan?error=auth_failed');
+        const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+        return res.redirect(`${frontendUrl}/app/plan?error=auth_failed`);
       }
       // Redirect to frontend plan page with success
-      res.redirect('http://localhost:3001/app/plan?auth=success');
+      const frontendUrl = process.env.CLIENT_URL || "http://localhost:3001";
+      res.redirect(`${frontendUrl}/app/plan?auth=success`);
     });
   }
 );
@@ -139,10 +146,13 @@ router.get('/events', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 
+      (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/google/auth/google/callback` : null) ||
+      "http://localhost:5001/api/google/auth/google/callback";
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      "http://localhost:5001/api/google/auth/google/callback"
+      callbackUrl
     );
 
     oauth2Client.setCredentials({
@@ -201,10 +211,13 @@ router.post('/events', async (req, res) => {
 
     const { summary, start, end, description, location } = req.body;
 
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 
+      (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/google/auth/google/callback` : null) ||
+      "http://localhost:5001/api/google/auth/google/callback";
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      "http://localhost:5001/api/google/auth/google/callback"
+      callbackUrl
     );
 
     oauth2Client.setCredentials({
