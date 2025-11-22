@@ -3,65 +3,33 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
+const { initializeDatabase } = require('./db/migrations');
 
-// Configure session store - use Redis in production if available, otherwise MemoryStore
-let sessionStore;
-if (process.env.REDIS_URL) {
-  // Use Redis for production (scalable, persistent)
-  try {
-    const RedisStore = require('connect-redis');
-    const { createClient } = require('redis');
-    const redisClient = createClient({
-      url: process.env.REDIS_URL,
-      socket: {
-        reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('Redis connection failed after 10 retries');
-            return false; // Stop retrying
-          }
-          return Math.min(retries * 100, 3000);
-        }
-      }
-    });
-    
-    redisClient.on('error', (err) => {
-      console.error('Redis Client Error:', err.message);
-    });
-    
-    redisClient.on('connect', () => {
-      console.log('Redis client connected successfully');
-    });
-    
-    // Connect Redis asynchronously (non-blocking)
-    redisClient.connect().catch((err) => {
-      console.error('Redis connection error (will continue with Redis store, connection will retry):', err.message);
-    });
-    
-    // Create Redis store (connection can be pending)
-    sessionStore = new RedisStore({ client: redisClient });
-    console.log('Using Redis session store');
-  } catch (error) {
-    console.error('Failed to initialize Redis store, falling back to MemoryStore:', error.message);
-    // Fallback to MemoryStore if Redis initialization fails
-    const MemoryStore = require('memorystore')(session);
-    sessionStore = new MemoryStore({
-      checkPeriod: 86400000
-    });
-    console.log('Using MemoryStore session store (Redis initialization failed)');
-  }
-} else {
-  // Use MemoryStore for single-instance deployments (development or small scale)
-  const MemoryStore = require('memorystore')(session);
-  sessionStore = new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
+console.log('🚀 Starting server...');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('PORT:', process.env.PORT || '5001 (default)');
+
+// Initialize database
+if (process.env.DATABASE_URL) {
+  console.log('🗄️  Initializing database...');
+  initializeDatabase().catch((error) => {
+    console.error('❌ Database initialization failed:', error);
+    // Continue anyway - database might be set up manually
   });
-  if (process.env.NODE_ENV === 'production') {
-    console.warn('Warning: Using MemoryStore in production. Consider adding Redis for scalability.');
-  } else {
-    console.log('Using MemoryStore session store');
-  }
+} else {
+  console.warn('⚠️  No DATABASE_URL found. Database features will not work.');
 }
 
+// Configure session store - using MemoryStore (works great for single-instance deployments)
+// Note: If you need to scale to multiple instances later, you can add Redis or PostgreSQL session store
+console.log('💾 Configuring session store...');
+const MemoryStore = require('memorystore')(session);
+const sessionStore = new MemoryStore({
+  checkPeriod: 86400000 // prune expired entries every 24h
+});
+console.log('✅ Using MemoryStore session store');
+
+console.log('📦 Loading routes...');
 // Import routes
 const todoRoutes = require('./routes/todoRoutes');
 const typeRoutes = require('./routes/typeRoutes');
@@ -70,8 +38,12 @@ const outlookRoutes = require('./routes/outlookRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 
+console.log('✅ Routes loaded successfully');
+
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+console.log('⚙️  Configuring middleware...');
 
 // Middleware
 app.use(express.json());
@@ -151,12 +123,14 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
+console.log('🌐 Starting HTTP server...');
 // Start server
 try {
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`✅✅✅ Server successfully started on port ${PORT} ✅✅✅`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`CORS origin: ${process.env.CLIENT_URL || 'http://localhost:3001'}`);
+    console.log(`Health check: http://0.0.0.0:${PORT}/health`);
   });
 
   // Handle server errors

@@ -1,75 +1,77 @@
-const fs = require('fs').promises;
-const path = require('path');
-
-const EMAILS_FILE = path.join(__dirname, '..', 'data', 'emails.json');
+const pool = require('../db/connection');
 
 class Email {
-  static async initializeFile() {
-    try {
-      await fs.access(EMAILS_FILE);
-    } catch (error) {
-      // Create directory if it doesn't exist
-      const dir = path.dirname(EMAILS_FILE);
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(EMAILS_FILE, JSON.stringify([], null, 2));
-    }
-  }
-
-  static async readEmails() {
-    await this.initializeFile();
-    const content = await fs.readFile(EMAILS_FILE, 'utf8');
-    let emails = [];
-    if (content.trim()) {
-      try {
-        emails = JSON.parse(content);
-      } catch (error) {
-        console.error('Error parsing emails.json:', error);
-        emails = [];
-      }
-    }
-    return emails;
-  }
-
-  static async writeEmails(emails) {
-    await this.initializeFile();
-    await fs.writeFile(EMAILS_FILE, JSON.stringify(emails, null, 2));
-  }
-
   static async addEmail(emailData) {
-    const emails = await this.readEmails();
-    
-    // Check if email already exists
-    const existingEmail = emails.find(e => e.email.toLowerCase() === emailData.email.toLowerCase());
-    if (existingEmail) {
-      // Update timestamp if email already exists
-      existingEmail.updatedAt = new Date().toISOString();
-      if (emailData.source) existingEmail.source = emailData.source;
-      await this.writeEmails(emails);
-      return existingEmail;
+    try {
+      const { email, source, name, organization, message } = emailData;
+      
+      // Check if email already exists
+      const existingResult = await pool.query(
+        'SELECT * FROM emails WHERE LOWER(email) = LOWER($1)',
+        [email.trim()]
+      );
+
+      if (existingResult.rows.length > 0) {
+        // Update existing email
+        const updatedResult = await pool.query(
+          `UPDATE emails 
+           SET updated_at = CURRENT_TIMESTAMP,
+               source = COALESCE($2, source),
+               name = COALESCE(NULLIF($3, ''), name),
+               organization = COALESCE(NULLIF($4, ''), organization),
+               message = COALESCE(NULLIF($5, ''), message)
+           WHERE LOWER(email) = LOWER($1)
+           RETURNING *`,
+          [email.trim(), source || null, name || null, organization || null, message || null]
+        );
+        return updatedResult.rows[0];
+      }
+
+      // Insert new email
+      const insertResult = await pool.query(
+        `INSERT INTO emails (email, source, name, organization, message)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [
+          email.trim().toLowerCase(),
+          source || 'unknown',
+          name || null,
+          organization || null,
+          message || null
+        ]
+      );
+      
+      return insertResult.rows[0];
+    } catch (error) {
+      console.error('Error adding email to database:', error);
+      throw error;
     }
-
-    // Add new email
-    const newEmail = {
-      email: emailData.email.toLowerCase().trim(),
-      source: emailData.source || 'unknown', // 'hero', 'footer', 'educator'
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Add additional fields if present (for educator form)
-    if (emailData.name) newEmail.name = emailData.name;
-    if (emailData.organization) newEmail.organization = emailData.organization;
-    if (emailData.message) newEmail.message = emailData.message;
-
-    emails.push(newEmail);
-    await this.writeEmails(emails);
-    return newEmail;
   }
 
   static async getAll() {
-    return await this.readEmails();
+    try {
+      const result = await pool.query(
+        'SELECT * FROM emails ORDER BY created_at DESC'
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching emails from database:', error);
+      throw error;
+    }
+  }
+
+  static async getBySource(source) {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM emails WHERE source = $1 ORDER BY created_at DESC',
+        [source]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching emails by source:', error);
+      throw error;
+    }
   }
 }
 
 module.exports = Email;
-
