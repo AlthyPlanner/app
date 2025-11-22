@@ -12,20 +12,42 @@ if (process.env.REDIS_URL) {
     const RedisStore = require('connect-redis');
     const { createClient } = require('redis');
     const redisClient = createClient({
-      url: process.env.REDIS_URL
+      url: process.env.REDIS_URL,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            console.error('Redis connection failed after 10 retries');
+            return false; // Stop retrying
+          }
+          return Math.min(retries * 100, 3000);
+        }
+      }
     });
-    redisClient.on('error', (err) => console.error('Redis Client Error', err));
-    redisClient.connect().catch(console.error);
+    
+    redisClient.on('error', (err) => {
+      console.error('Redis Client Error:', err.message);
+    });
+    
+    redisClient.on('connect', () => {
+      console.log('Redis client connected successfully');
+    });
+    
+    // Connect Redis asynchronously (non-blocking)
+    redisClient.connect().catch((err) => {
+      console.error('Redis connection error (will continue with Redis store, connection will retry):', err.message);
+    });
+    
+    // Create Redis store (connection can be pending)
     sessionStore = new RedisStore({ client: redisClient });
     console.log('Using Redis session store');
   } catch (error) {
     console.error('Failed to initialize Redis store, falling back to MemoryStore:', error.message);
-    // Fallback to MemoryStore if Redis fails
+    // Fallback to MemoryStore if Redis initialization fails
     const MemoryStore = require('memorystore')(session);
     sessionStore = new MemoryStore({
       checkPeriod: 86400000
     });
-    console.log('Using MemoryStore session store (Redis fallback)');
+    console.log('Using MemoryStore session store (Redis initialization failed)');
   }
 } else {
   // Use MemoryStore for single-instance deployments (development or small scale)
@@ -129,14 +151,23 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start server
+try {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`CORS origin: ${process.env.CLIENT_URL || 'http://localhost:3001'}`);
+  });
 
-// Handle server errors
-server.on('error', (error) => {
-  console.error('Server error:', error);
-  if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Please kill the process using that port.`);
-  }
-});
+  // Handle server errors
+  server.on('error', (error) => {
+    console.error('❌ Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Please kill the process using that port.`);
+    }
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
