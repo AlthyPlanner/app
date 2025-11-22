@@ -30,7 +30,13 @@ const addEmail = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding email:', error);
-    res.status(500).json({ error: 'Failed to save email' });
+    if (error.message.includes('DATABASE_URL')) {
+      res.status(503).json({ 
+        error: 'Database not configured. Please add PostgreSQL to Railway and set DATABASE_URL.' 
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to save email: ' + error.message });
+    }
   }
 };
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './components/pages/LandingPage';
 import CalendarPage from './components/pages/CalendarPage';
@@ -12,7 +13,14 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/app" element={<AppLayout />}>
+      <Route 
+        path="/app" 
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="/app/plan" replace />} />
         <Route path="plan" element={<CalendarPage />} />
         <Route path="tasks" element={<TasksPage />} />

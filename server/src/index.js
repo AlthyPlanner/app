@@ -47,6 +47,12 @@ console.log('⚙️  Configuring middleware...');
 
 // Middleware
 app.use(express.json());
+
+// CORS configuration - allow multiple origins for development and production
+const allowedOrigins = process.env.CLIENT_URL 
+  ? process.env.CLIENT_URL.split(',').map(url => url.trim())
+  : ["http://localhost:3001", "http://localhost:3000"];
+
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:3001",
   credentials: true

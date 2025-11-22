@@ -2,6 +2,10 @@ const pool = require('../db/connection');
 
 class Email {
   static async addEmail(emailData) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is not configured. Please add PostgreSQL database to Railway.');
+    }
+
     try {
       const { email, source, name, organization, message } = emailData;
       
@@ -41,21 +45,26 @@ class Email {
         ]
       );
       
+      console.log('✅ Email saved to PostgreSQL database:', insertResult.rows[0].email);
       return insertResult.rows[0];
     } catch (error) {
-      console.error('Error adding email to database:', error);
+      console.error('❌ Error adding email to database:', error);
       throw error;
     }
   }
 
   static async getAll() {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is not configured. Please add PostgreSQL database to Railway.');
+    }
+
     try {
       const result = await pool.query(
         'SELECT * FROM emails ORDER BY created_at DESC'
       );
       return result.rows;
     } catch (error) {
-      console.error('Error fetching emails from database:', error);
+      console.error('❌ Error fetching emails from database:', error);
       throw error;
     }
   }
