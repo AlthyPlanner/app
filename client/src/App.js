@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
+import LandingPage from './components/pages/LandingPage';
 import CalendarPage from './components/pages/CalendarPage';
 import TasksPage from './components/pages/TasksPage';
 import GoalsPage from './components/pages/GoalsPage';
@@ -10,7 +11,8 @@ import AlthyPage from './components/pages/AlthyPage';
 const App = () => {
   return (
     <Routes>
-      <Route path="/" element={<AppLayout />}>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/app" element={<AppLayout />}>
         <Route index element={<Navigate to="/app/plan" replace />} />
         <Route path="plan" element={<CalendarPage />} />
         <Route path="tasks" element={<TasksPage />} />

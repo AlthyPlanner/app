@@ -135,11 +135,29 @@
     "id": "t33o9pl3",
     "googleId": "1lg11haq18ut424csvq55aqs42",
     "summary": "UI Discussion",
-    "start": "2025-11-19T18:00:00-05:00",
-    "end": "2025-11-19T18:30:00-05:00",
+    "start": "2025-11-20T17:30:00-05:00",
+    "end": "2025-11-20T18:00:00-05:00",
     "description": "",
     "location": "",
     "source": "google",
     "category": "work"
+  },
+  {
+    "id": "0zx8uip0",
+    "summary": "Walk 1 mile",
+    "start": "2025-11-19T02:30:00.000Z",
+    "end": "2025-11-19T02:45:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "fitness"
+  },
+  {
+    "id": "f6uuw28j",
+    "summary": "walking 1 mile",
+    "start": "2025-11-19T21:30:00.000Z",
+    "end": "2025-11-19T21:45:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "fitness"
   }
 ]

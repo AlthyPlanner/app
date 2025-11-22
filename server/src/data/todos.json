@@ -141,12 +141,12 @@
   },
   {
     "text": "Call dentist for appointment",
-    "completed": false,
+    "completed": true,
     "due": "2025-11-19T14:00:00.000Z",
     "type": "Personal",
     "category": "personal",
     "goal": null,
-    "status": null,
+    "status": "complete",
     "priority": null
   },
   {
@@ -231,12 +231,12 @@
   },
   {
     "text": "Meal prep for the week",
-    "completed": false,
+    "completed": true,
     "due": "2025-11-19T16:00:00.000Z",
     "type": "Personal",
     "category": "personal",
     "goal": null,
-    "status": null,
+    "status": "complete",
     "priority": null
   },
   {
@@ -371,12 +371,12 @@
   },
   {
     "text": "Live Demo!!",
-    "completed": false,
+    "completed": true,
     "due": "2025-11-17T19:00",
     "type": "",
     "category": "personal",
     "goal": null,
-    "status": null,
+    "status": "complete",
     "priority": "high"
   },
   {
