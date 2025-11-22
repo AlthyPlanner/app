@@ -4,12 +4,49 @@ const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
 
+// Configure session store - use Redis in production if available, otherwise MemoryStore
+let sessionStore;
+if (process.env.REDIS_URL) {
+  // Use Redis for production (scalable, persistent)
+  try {
+    const RedisStore = require('connect-redis');
+    const { createClient } = require('redis');
+    const redisClient = createClient({
+      url: process.env.REDIS_URL
+    });
+    redisClient.on('error', (err) => console.error('Redis Client Error', err));
+    redisClient.connect().catch(console.error);
+    sessionStore = new RedisStore({ client: redisClient });
+    console.log('Using Redis session store');
+  } catch (error) {
+    console.error('Failed to initialize Redis store, falling back to MemoryStore:', error.message);
+    // Fallback to MemoryStore if Redis fails
+    const MemoryStore = require('memorystore')(session);
+    sessionStore = new MemoryStore({
+      checkPeriod: 86400000
+    });
+    console.log('Using MemoryStore session store (Redis fallback)');
+  }
+} else {
+  // Use MemoryStore for single-instance deployments (development or small scale)
+  const MemoryStore = require('memorystore')(session);
+  sessionStore = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('Warning: Using MemoryStore in production. Consider adding Redis for scalability.');
+  } else {
+    console.log('Using MemoryStore session store');
+  }
+}
+
 // Import routes
 const todoRoutes = require('./routes/todoRoutes');
 const typeRoutes = require('./routes/typeRoutes');
 const googleRoutes = require('./routes/googleRoutes');
 const outlookRoutes = require('./routes/outlookRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -26,6 +63,7 @@ app.set("trust proxy", 1);
 
 // Session configuration
 app.use(session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || "your-secret-key",
   resave: false,
   saveUninitialized: false,
@@ -68,6 +106,7 @@ if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
   app.use('/api/outlook', outlookRoutes);
 }
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/emails', emailRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

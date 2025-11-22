@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiFetch } from '../../api';
+import NotificationToast from './NotificationToast';
 import './LandingPage.css';
 
 const LandingPage = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [email, setEmail] = useState('');
   const [heroEmail, setHeroEmail] = useState('');
+  const [notification, setNotification] = useState(null);
   const [educatorForm, setEducatorForm] = useState({
     name: '',
     email: '',
@@ -13,25 +16,109 @@ const LandingPage = () => {
     message: ''
   });
 
-  const handleHeroEmailSubmit = (e) => {
-    e.preventDefault();
-    // Handle email submission here
-    console.log('Hero email submitted:', heroEmail);
-    // You can add API call or other logic here
-    setHeroEmail('');
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
   };
 
-  const handleEducatorFormSubmit = (e) => {
+  const hideNotification = () => {
+    setNotification(null);
+  };
+
+  const handleHeroEmailSubmit = async (e) => {
     e.preventDefault();
-    const mailtoLink = `mailto:jing@althyplanner.com?subject=Educator Inquiry from ${educatorForm.name}&body=Name: ${educatorForm.name}%0D%0AEmail: ${educatorForm.email}%0D%0AOrganization: ${educatorForm.organization}%0D%0A%0D%0AMessage:%0D%0A${educatorForm.message}`;
-    window.location.href = mailtoLink;
-    // Reset form
-    setEducatorForm({
-      name: '',
-      email: '',
-      organization: '',
-      message: ''
-    });
+    try {
+      const res = await apiFetch('/api/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: heroEmail,
+          source: 'hero'
+        })
+      });
+
+      if (res.ok) {
+        showNotification('Thank you! You\'ve been added to our waiting list. 🎉');
+        setHeroEmail('');
+      } else {
+        const data = await res.json();
+        showNotification(data.error || 'Something went wrong. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error submitting email:', error);
+      showNotification('Failed to submit email. Please try again.', 'error');
+    }
+  };
+
+  const handleFooterEmailSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    
+    try {
+      const res = await apiFetch('/api/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          source: 'footer'
+        })
+      });
+
+      if (res.ok) {
+        showNotification('Thank you! You\'ve been added to our waiting list. 🎉');
+        setEmail('');
+      } else {
+        const data = await res.json();
+        showNotification(data.error || 'Something went wrong. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error submitting email:', error);
+      showNotification('Failed to submit email. Please try again.', 'error');
+    }
+  };
+
+  const handleEducatorFormSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Save to database
+      const res = await apiFetch('/api/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: educatorForm.email,
+          source: 'educator',
+          name: educatorForm.name,
+          organization: educatorForm.organization,
+          message: educatorForm.message
+        })
+      });
+
+      if (res.ok) {
+        showNotification('Thank you! Your inquiry has been submitted. We\'ll be in touch soon. ✨');
+        // Also send email via mailto
+        const mailtoLink = `mailto:jing@althyplanner.com?subject=Educator Inquiry from ${educatorForm.name}&body=Name: ${educatorForm.name}%0D%0AEmail: ${educatorForm.email}%0D%0AOrganization: ${educatorForm.organization}%0D%0A%0D%0AMessage:%0D%0A${educatorForm.message}`;
+        window.location.href = mailtoLink;
+        
+        // Reset form
+        setEducatorForm({
+          name: '',
+          email: '',
+          organization: '',
+          message: ''
+        });
+      } else {
+        const data = await res.json();
+        showNotification(data.error || 'Something went wrong. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error submitting educator form:', error);
+      showNotification('Failed to submit form. Please try again.', 'error');
+    }
   };
 
   const testimonials = [
@@ -67,6 +154,14 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
+      {notification && (
+        <NotificationToast
+          message={notification.message}
+          type={notification.type}
+          onClose={hideNotification}
+          duration={4000}
+        />
+      )}
       {/* Header */}
       <header className="landing-header">
         <nav className="landing-nav">
@@ -264,16 +359,17 @@ const LandingPage = () => {
               <span className="footer-logo-text">Althy</span>
             </div>
             <p className="footer-newsletter-label">Join our waiting list</p>
-            <div className="footer-newsletter">
+            <form className="footer-newsletter" onSubmit={handleFooterEmailSubmit}>
               <input
                 type="email"
                 placeholder="Enter your email"
                 className="footer-email-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
-              <button className="footer-email-btn">→</button>
-            </div>
+              <button type="submit" className="footer-email-btn">→</button>
+            </form>
           </div>
 
           <div className="footer-column">
