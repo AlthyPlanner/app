@@ -79,18 +79,18 @@ const LandingPage = () => {
   const testimonials = [
     {
       title: "My go-to planner",
-      text: "Does what it promises. Saves me time and keeps me organized. Does what it promises. Saves me time and keeps me organized.",
+      text: "This gives structure to the small, everyday tasks so the larger goals actually feel achievable — not just seem achievable. That's so cool.",
       author: "SARAH H."
     },
     {
-      title: "Smooth & Reliable",
-      text: "Great features, smooth experience. Exactly what I needed.",
-      author: "MICHAEL T."
+      title: "Saves time",
+      text: "Does what it promises. Saves me time and keeps me organized.",
+      author: "EMMA L."
     },
     {
-      title: "My go-to planner",
-      text: "Does what it promises. Saves me time and keeps me organized. Does what it promises. Saves me time and keeps me organized.",
-      author: "EMMA L."
+      title: "Smooth & Reliable",
+      text: "I love how Althy brings everything together — it connects my tasks and goals, and the progress bar makes progress feel visual and motivating.",
+      author: "MICHAEL T."
     },
     {
       title: "Surprisingly helpful",
