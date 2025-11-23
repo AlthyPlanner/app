@@ -109,7 +109,7 @@ const ContactPage = () => {
       <section className="educator-section" style={{backgroundImage: 'url(/img/banner.png)', marginTop: '8rem'}}>
         <h2 className="educator-title">Are you an educator?</h2>
         <p className="educator-description">
-          Althy has helped thousands of students from top universities. Bring Althy to your school.
+          Bring Althy to your school.
         </p>
         <form className="educator-form" onSubmit={handleEducatorFormSubmit}>
           <div className="educator-form-row">
