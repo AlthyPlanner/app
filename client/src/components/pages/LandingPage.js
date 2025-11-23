@@ -257,7 +257,6 @@ const LandingPage = () => {
           <div className="footer-column footer-brand">
             <div className="footer-logo">
               <img src="/img/Logo-4circle.png" alt="Althy" className="footer-logo-img" />
-              <span className="footer-logo-text">Althy</span>
             </div>
             <p className="footer-newsletter-label">Join our waiting list</p>
             <form className="footer-newsletter" onSubmit={handleFooterEmailSubmit}>

@@ -6,6 +6,7 @@ import './LandingPage.css';
 
 const ContactPage = () => {
   const [notification, setNotification] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [educatorForm, setEducatorForm] = useState({
     name: '',
     email: '',
@@ -75,15 +76,32 @@ const ContactPage = () => {
       {/* Header */}
       <header className="landing-header">
         <nav className="landing-nav">
-          <Link to="/about" className="nav-link">about</Link>
-          <Link to="/for-students" className="nav-link">for students</Link>
+          <button 
+            className="hamburger-menu" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span className={`hamburger-line ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-line ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-line ${isMobileMenuOpen ? 'open' : ''}`}></span>
+          </button>
           <Link to="/" className="nav-logo">
             <img src="/img/Logo.png" alt="Althy" className="althy-logo-img" />
           </Link>
-          <Link to="/contact" className="nav-link">contact</Link>
-          <Link to="/app" className="nav-download-btn-link">
-            <button className="nav-download-btn">App Coming Soon</button>
-          </Link>
+          {isMobileMenuOpen && (
+            <div 
+              className="mobile-menu-overlay" 
+              onClick={() => setIsMobileMenuOpen(false)}
+            ></div>
+          )}
+          <div className={`nav-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+            <Link to="/about" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>about</Link>
+            <Link to="/for-students" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>for students</Link>
+            <Link to="/contact" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>contact</Link>
+            <Link to="/app" className="nav-download-btn-link" onClick={() => setIsMobileMenuOpen(false)}>
+              <button className="nav-download-btn">App Coming Soon</button>
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -140,7 +158,6 @@ const ContactPage = () => {
           <div className="footer-column footer-brand">
             <div className="footer-logo">
               <img src="/img/Logo-4circle.png" alt="Althy" className="footer-logo-img" />
-              <span className="footer-logo-text">Althy</span>
             </div>
           </div>
         </div>
