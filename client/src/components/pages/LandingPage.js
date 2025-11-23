@@ -9,12 +9,7 @@ const LandingPage = () => {
   const [email, setEmail] = useState('');
   const [heroEmail, setHeroEmail] = useState('');
   const [notification, setNotification] = useState(null);
-  const [educatorForm, setEducatorForm] = useState({
-    name: '',
-    email: '',
-    organization: '',
-    message: ''
-  });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
@@ -80,46 +75,6 @@ const LandingPage = () => {
     }
   };
 
-  const handleEducatorFormSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Save to database
-      const res = await apiFetch('/api/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: educatorForm.email,
-          source: 'educator',
-          name: educatorForm.name,
-          organization: educatorForm.organization,
-          message: educatorForm.message
-        })
-      });
-
-      if (res.ok) {
-        showNotification('Thank you! Your inquiry has been submitted. We\'ll be in touch soon. ✨');
-        // Also send email via mailto
-        const mailtoLink = `mailto:jing@althyplanner.com?subject=Educator Inquiry from ${educatorForm.name}&body=Name: ${educatorForm.name}%0D%0AEmail: ${educatorForm.email}%0D%0AOrganization: ${educatorForm.organization}%0D%0A%0D%0AMessage:%0D%0A${educatorForm.message}`;
-        window.location.href = mailtoLink;
-        
-        // Reset form
-        setEducatorForm({
-          name: '',
-          email: '',
-          organization: '',
-          message: ''
-        });
-      } else {
-        const data = await res.json();
-        showNotification(data.error || 'Something went wrong. Please try again.', 'error');
-      }
-    } catch (error) {
-      console.error('Error submitting educator form:', error);
-      showNotification('Failed to submit form. Please try again.', 'error');
-    }
-  };
 
   const testimonials = [
     {
@@ -165,15 +120,32 @@ const LandingPage = () => {
       {/* Header */}
       <header className="landing-header">
         <nav className="landing-nav">
-          <Link to="/" className="nav-link">about</Link>
-          <Link to="/" className="nav-link">for students</Link>
+          <button 
+            className="hamburger-menu" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span className={`hamburger-line ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-line ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-line ${isMobileMenuOpen ? 'open' : ''}`}></span>
+          </button>
           <Link to="/" className="nav-logo">
             <img src="/img/Logo.png" alt="Althy" className="althy-logo-img" />
           </Link>
-          <Link to="/" className="nav-link">contact</Link>
-          <Link to="/app" className="nav-download-btn-link">
-            <button className="nav-download-btn">Download Althy</button>
-          </Link>
+          {isMobileMenuOpen && (
+            <div 
+              className="mobile-menu-overlay" 
+              onClick={() => setIsMobileMenuOpen(false)}
+            ></div>
+          )}
+          <div className={`nav-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+            <Link to="/about" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>about</Link>
+            <Link to="/for-students" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>for students</Link>
+            <Link to="/contact" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>contact</Link>
+            <Link to="/app" className="nav-download-btn-link" onClick={() => setIsMobileMenuOpen(false)}>
+              <button className="nav-download-btn">App Coming Soon</button>
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -250,32 +222,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* App Screenshots Section */}
-      <section className="screenshots-section">
-        <h2 className="screenshots-title">Don't need to overwork to achieve your goals</h2>
-        <p className="screenshots-description">
-          We transform your long-term goals into manageable steps and design a schedule that makes space for both rest and the hobbies you love.
-        </p>
-        <div className="screenshots-container">
-          <img src="/img/screenshot1.png" alt="Althy app screenshot" className="app-screenshot" />
-          <img src="/img/screenshot2.png" alt="Althy app screenshot" className="app-screenshot" />
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="how-it-works-section">
-        <div className="how-it-works-label">HOW DO WE WORK</div>
-        <div className="how-it-works-equation">
-          AI + Healthy = <img src="/img/Logo-light-blue.png" alt="Althy" className="althy-logo-large-img" />
-        </div>
-        <p className="how-it-works-description">
-          We transform your long-term goals into manageable steps and design a schedule that makes space for both rest and the hobbies you love.
-        </p>
-        <div className="process-visualization">
-          <img src="/img/Steps.png" alt="How Althy works - breaking down goals into steps" className="steps-image" />
-        </div>
-      </section>
-
       {/* Testimonials Section */}
       <section className="testimonials-section">
         <h2 className="testimonials-title">Read what people say</h2>
@@ -292,62 +238,17 @@ const LandingPage = () => {
               </div>
             ))}
           </div>
-          <div className="testimonial-nav-controls">
-            <button className="testimonial-nav-btn testimonial-nav-left" onClick={prevTestimonial}>
-              ←
-            </button>
-            <button className="testimonial-nav-btn testimonial-nav-right" onClick={nextTestimonial}>
-              →
-            </button>
-          </div>
+          {testimonials.length > 4 && (
+            <div className="testimonial-nav-controls">
+              <button className="testimonial-nav-btn testimonial-nav-left" onClick={prevTestimonial}>
+                ←
+              </button>
+              <button className="testimonial-nav-btn testimonial-nav-right" onClick={nextTestimonial}>
+                →
+              </button>
+            </div>
+          )}
         </div>
-      </section>
-
-      {/* Educator Section */}
-      <section className="educator-section" style={{backgroundImage: 'url(/img/banner.png)'}}>
-        <h2 className="educator-title">Are you an educator?</h2>
-        <p className="educator-description">
-          Althy has helped thousands of students from top universities. Bring Althy to your school.
-        </p>
-        <form className="educator-form" onSubmit={handleEducatorFormSubmit}>
-          <div className="educator-form-row">
-            <input
-              type="text"
-              placeholder="Name"
-              className="educator-form-input"
-              value={educatorForm.name}
-              onChange={(e) => setEducatorForm({...educatorForm, name: e.target.value})}
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              className="educator-form-input"
-              value={educatorForm.email}
-              onChange={(e) => setEducatorForm({...educatorForm, email: e.target.value})}
-              required
-            />
-          </div>
-          <input
-            type="text"
-            placeholder="Organization"
-            className="educator-form-input educator-form-input-full"
-            value={educatorForm.organization}
-            onChange={(e) => setEducatorForm({...educatorForm, organization: e.target.value})}
-            required
-          />
-          <textarea
-            placeholder="Message"
-            className="educator-form-textarea"
-            rows="4"
-            value={educatorForm.message}
-            onChange={(e) => setEducatorForm({...educatorForm, message: e.target.value})}
-            required
-          />
-          <button type="submit" className="educator-btn">
-            <span>Send</span>
-          </button>
-        </form>
       </section>
 
       {/* Footer */}

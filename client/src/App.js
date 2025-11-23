@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './components/pages/LandingPage';
+import AboutPage from './components/pages/AboutPage';
+import ContactPage from './components/pages/ContactPage';
+import ForStudentsPage from './components/pages/ForStudentsPage';
 import CalendarPage from './components/pages/CalendarPage';
 import TasksPage from './components/pages/TasksPage';
 import GoalsPage from './components/pages/GoalsPage';
@@ -13,6 +16,9 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/for-students" element={<ForStudentsPage />} />
       <Route 
         path="/app" 
         element={
