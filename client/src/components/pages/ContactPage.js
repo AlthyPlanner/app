@@ -99,14 +99,25 @@ const ContactPage = () => {
             <Link to="/for-students" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>for students</Link>
             <Link to="/contact" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>contact</Link>
             <Link to="/app" className="nav-download-btn-link" onClick={() => setIsMobileMenuOpen(false)}>
-              <button className="nav-download-btn">App Coming Soon</button>
+              <button className="nav-download-btn">App Early Access</button>
             </Link>
           </div>
         </nav>
       </header>
 
+      {/* Contact Section */}
+      <section className="contact-section" style={{marginTop: '8rem'}}>
+        <h2 className="contact-section-title">Reach out to us</h2>
+        <p className="contact-description">
+          We're building something special and we'd love to have you join us on this journey. We're currently recruiting interns and looking for enthusiastic testing users who want to help shape the future of personal planning. If you're passionate about productivity, design, or simply want to be part of an innovative project, we'd love to hear from you.
+        </p>
+        <p className="contact-email">
+          Reach us at: <a href="mailto:jing@althyplanner.com" className="contact-email-link">jing@althyplanner.com</a>
+        </p>
+      </section>
+
       {/* Educator Section */}
-      <section className="educator-section" style={{backgroundImage: 'url(/img/banner.png)', marginTop: '8rem'}}>
+      <section className="educator-section" style={{backgroundImage: 'url(/img/banner.png)'}}>
         <h2 className="educator-title">Are you an educator?</h2>
         <p className="educator-description">
           Bring Althy to your school.

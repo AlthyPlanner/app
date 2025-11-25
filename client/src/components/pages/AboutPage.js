@@ -82,7 +82,7 @@ const AboutPage = () => {
             <Link to="/for-students" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>for students</Link>
             <Link to="/contact" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>contact</Link>
             <Link to="/app" className="nav-download-btn-link" onClick={() => setIsMobileMenuOpen(false)}>
-              <button className="nav-download-btn">App Coming Soon</button>
+              <button className="nav-download-btn">App Early Access</button>
             </Link>
           </div>
         </nav>
