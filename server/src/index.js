@@ -121,11 +121,14 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
 
 app.use('/api/types', typeRoutes);
 //app.use('/api/google', googleRoutes);
+const googleRoutes = require('./routes/googleRoutes');
+...
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   app.use('/api/google', googleRoutes);
 } else {
-  console.warn("Google OAuth not configured — skipping /api/google route");
+  console.warn("Google OAuth not configured");
 }
+
 
 // Mount Outlook routes only if credentials are present
 if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
