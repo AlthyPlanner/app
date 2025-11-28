@@ -1,89 +1,68 @@
-// src/services/planPostprocessor.js
-
 function normalizeDay(day) {
-  if (!day) return null;
-
-  const map = {
-    "monday": "Monday",
-    "tuesday": "Tuesday",
-    "wednesday": "Wednesday",
-    "thursday": "Thursday",
-    "friday": "Friday",
-    "saturday": "Saturday",
-    "sunday": "Sunday"
+  const days = {
+    monday: 0,
+    tuesday: 1,
+    wednesday: 2,
+    thursday: 3,
+    friday: 4,
+    saturday: 5,
+    sunday: 6,
   };
 
-  const d = day.trim().toLowerCase();
+  const key = day.trim().toLowerCase();
 
-  // Accept full names only (as per Niraj's JSON format)
-  if (map[d]) return map[d];
-
-  throw new Error(`Invalid day: ${day}`);
-}
-
-function validateTime(time) {
-  const regex = /^([01]\d|2[0-3]):[0-5]\d$/;
-  if (!regex.test(time)) {
-    throw new Error(`Invalid time format: ${time}`);
-  }
-}
-
-function validateWeeklyPlan(weekly_plan) {
-  if (!Array.isArray(weekly_plan)) {
-    throw new Error("weekly_plan must be an array");
+  // FIX: check with `!(key in days)` instead of `!days[key]`
+  if (!(key in days)) {
+    throw new Error("Invalid day: " + day);
   }
 
-  return weekly_plan.map(entry => {
-    if (!entry.day || !entry.time || !entry.activity) {
-      throw new Error("Each weekly_plan entry must include day, time, activity");
-    }
-
-    // Normalize full weekday names like "Monday"
-    entry.day = normalizeDay(entry.day);
-
-    validateTime(entry.time);
-
-    return entry;
-  });
+  return days[key];
 }
 
-function validateMilestones(milestones) {
-  if (!Array.isArray(milestones)) {
-    throw new Error("milestones must be an array");
+function normalizeTime(time) {
+  let t = time.toLowerCase().replace(/\s+/g, "");
+
+  if (t.includes("am") || t.includes("pm")) {
+    const dt = new Date("1970-01-01 " + time);
+    return dt.toISOString().substr(11, 5);
   }
 
-  return milestones.map(m => {
-    if (!m.date || !m.goal) {
-      throw new Error("Each milestone must include date and goal");
-    }
+  if (/^\d{2}:\d{2}$/.test(t)) return t;
 
-    if (isNaN(Date.parse(m.date))) {
-      throw new Error(`Invalid date format: ${m.date}`);
-    }
-
-    return m;
-  });
+  throw new Error("Invalid time: " + time);
 }
 
-function postprocessPlanResponse(modelOutput) {
+function normalizeDate(dateString) {
+  if (isNaN(Date.parse(dateString))) {
+    throw new Error("Invalid date: " + dateString);
+  }
+  return dateString;
+}
+
+function postprocessPlan(raw) {
+  let data;
   try {
-    const plan = typeof modelOutput === "string"
-      ? JSON.parse(modelOutput)
-      : modelOutput;
-
-    if (!plan.weekly_plan) throw new Error("Missing weekly_plan");
-    if (!plan.milestones) throw new Error("Missing milestones");
-
-    return {
-      weekly_plan: validateWeeklyPlan(plan.weekly_plan),
-      milestones: validateMilestones(plan.milestones)
-    };
-  } catch (err) {
-    console.error("Postprocessor failed:", err.message);
-    throw err;
+    data = JSON.parse(raw);
+  } catch (e) {
+    throw new Error("Model returned invalid JSON");
   }
+
+  if (!data.weekly_plan || !data.milestones) {
+    throw new Error("Missing weekly_plan or milestones");
+  }
+
+  const weekly = data.weekly_plan.map((item) => ({
+    weekdayIndex: normalizeDay(item.day),
+    time: normalizeTime(item.time),
+    activity: item.activity.trim(),
+  }));
+
+  const milestones = data.milestones.map((ms) => ({
+    date: normalizeDate(ms.date),
+    goal: ms.goal.trim(),
+  }));
+
+  return { weekly_plan: weekly, milestones };
 }
 
-module.exports = {
-  postprocessPlanResponse
-};
+module.exports = { postprocessPlan };
