@@ -122,11 +122,12 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
 app.use('/api/types', typeRoutes);
 //app.use('/api/google', googleRoutes);
 //const googleRoutes = require('./routes/googleRoutes');
-...
+// Google OAuth route — only load if credentials exist
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  const googleRoutes = require('./routes/googleRoutes');
   app.use('/api/google', googleRoutes);
 } else {
-  console.warn("Google OAuth not configured");
+  console.warn("⚠️ Google OAuth not configured — skipping /api/google route");
 }
 
 
