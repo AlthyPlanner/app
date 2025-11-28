@@ -15,14 +15,13 @@ function normalizeDay(day) {
 
   const d = day.trim().toLowerCase();
 
-  // Accept full names only (as per Niraj's design)
+  // Accept full names only (as per Niraj's JSON format)
   if (map[d]) return map[d];
 
   throw new Error(`Invalid day: ${day}`);
 }
 
 function validateTime(time) {
-  // Valid time formats: "HH:MM" (24h)
   const regex = /^([01]\d|2[0-3]):[0-5]\d$/;
   if (!regex.test(time)) {
     throw new Error(`Invalid time format: ${time}`);
@@ -39,7 +38,7 @@ function validateWeeklyPlan(weekly_plan) {
       throw new Error("Each weekly_plan entry must include day, time, activity");
     }
 
-    // Normalize full weekday names
+    // Normalize full weekday names like "Monday"
     entry.day = normalizeDay(entry.day);
 
     validateTime(entry.time);
@@ -58,7 +57,6 @@ function validateMilestones(milestones) {
       throw new Error("Each milestone must include date and goal");
     }
 
-    // Basic ISO date validation
     if (isNaN(Date.parse(m.date))) {
       throw new Error(`Invalid date format: ${m.date}`);
     }
