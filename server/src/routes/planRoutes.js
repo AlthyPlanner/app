@@ -1,33 +1,68 @@
-const express = require("express");
-const router = express.Router();
+function normalizeDay(day) {
+  const days = {
+    monday: 0,
+    tuesday: 1,
+    wednesday: 2,
+    thursday: 3,
+    friday: 4,
+    saturday: 5,
+    sunday: 6,
+  };
 
-const { postprocessPlan } = require("../services/planPostprocessor");
+  const key = day.trim().toLowerCase();
 
-// TEMPORARY LLM function for testing
-async function callLLM(goal) {
-  return JSON.stringify({
-    weekly_plan: [
-      { day: "Monday", time: "7am", activity: "Run 5 km" }
-    ],
-    milestones: [
-      { date: "2026-03-01", goal: "Run a 10k" }
-    ]
-  });
+  // FIXED: correct validation
+  if (!(key in days)) {
+    throw new Error("Invalid day: " + day);
+  }
+
+  return days[key];
 }
 
-router.post("/", async (req, res) => {
-  try {
-    const userGoal = req.body.goal;
+function normalizeTime(time) {
+  let t = time.toLowerCase().replace(/\s+/g, "");
 
-    const rawOutput = await callLLM(userGoal);
-
-    const cleanPlan = postprocessPlan(rawOutput);
-
-    res.json({ success: true, cleanPlan });
-
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  if (t.includes("am") || t.includes("pm")) {
+    const dt = new Date("1970-01-01 " + time);
+    return dt.toISOString().substr(11, 5);
   }
-});
 
-module.exports = router;
+  if (/^\d{2}:\d{2}$/.test(t)) return t;
+
+  throw new Error("Invalid time: " + time);
+}
+
+function normalizeDate(dateString) {
+  if (isNaN(Date.parse(dateString))) {
+    throw new Error("Invalid date: " + dateString);
+  }
+  return dateString;
+}
+
+function postprocessPlan(raw) {
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    throw new Error("Model returned invalid JSON");
+  }
+
+  if (!data.weekly_plan || !data.milestones) {
+    throw new Error("Missing weekly_plan or milestones");
+  }
+
+  const weekly = data.weekly_plan.map((item) => ({
+    weekdayIndex: normalizeDay(item.day),
+    time: normalizeTime(item.time),
+    activity: item.activity.trim(),
+  }));
+
+  const milestones = data.milestones.map((ms) => ({
+    date: normalizeDate(ms.date),
+    goal: ms.goal.trim(),
+  }));
+
+  return { weekly_plan: weekly, milestones };
+}
+
+module.exports = { postprocessPlan };
