@@ -127,7 +127,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   const googleRoutes = require('./routes/googleRoutes');
   app.use('/api/google', googleRoutes);
 } else {
-  console.warn("⚠️ Google OAuth not configured — skipping /api/google route");
+  console.warn("Google OAuth not configured — skipping /api/google route");
 }
 
 
