@@ -99,6 +99,8 @@ app.use(passport.session());
 
 // Routes
 app.use('/api/todos', todoRoutes);
+app.use('/api/plan', require('./routes/planRoutes'));
+
 
 // Mount chat routes (handles actions + AI responses)
 if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
