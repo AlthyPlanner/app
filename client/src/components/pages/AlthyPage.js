@@ -338,12 +338,15 @@ const AlthyPage = () => {
         padding: isMobile ? '16px' : '20px',
         position: 'fixed',
         top: `${logoHeaderHeight}px`, // Position below logo header
-        left: 0,
-        right: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
         background: 'white',
         zIndex: 100,
         borderBottom: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        width: '100%',
+        maxWidth: '420px',
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {/* Chat History Button (Clock Icon) */}
@@ -1075,17 +1078,21 @@ const AlthyPage = () => {
       <div style={{ 
         position: 'fixed',
         bottom: bottomOffset,
-        left: 0,
-        right: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
         padding: inputBottomPadding,
         background: 'white',
-        zIndex: 1001
+        zIndex: 1001,
+        width: '100%',
+        maxWidth: '420px',
+        boxSizing: 'border-box'
       }}>
         <form onSubmit={handleSubmit} style={{ 
           display: 'flex', 
           alignItems: 'center', 
           gap: inputGap,
-          maxWidth: isMobile ? '100%' : '600px',
+          width: '100%',
+          maxWidth: '100%',
           margin: '0 auto'
         }}>
           <input

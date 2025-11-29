@@ -5,13 +5,15 @@ const session = require('express-session');
 const passport = require('passport');
 const { initializeDatabase } = require('./db/migrations');
 
+// Configure Passport serialize/deserialize BEFORE loading routes
+require('./config/passport');
+
 console.log('🚀 Starting server...');
 console.log('Environment:', process.env.NODE_ENV || 'development');
 console.log('PORT:', process.env.PORT || '5001 (default)');
 
-// Initialize database
+// Initialize database (only creates tables/indexes if they don't exist)
 if (process.env.DATABASE_URL) {
-  console.log('🗄️  Initializing database...');
   initializeDatabase().catch((error) => {
     console.error('❌ Database initialization failed:', error);
     // Continue anyway - database might be set up manually
@@ -30,13 +32,15 @@ const sessionStore = new MemoryStore({
 console.log('✅ Using MemoryStore session store');
 
 console.log('📦 Loading routes...');
-// Import routes
+// Import routes - IMPORTANT: Load googleRoutes first to set up Passport serialize/deserialize
+const googleRoutes = require('./routes/googleRoutes');
 const todoRoutes = require('./routes/todoRoutes');
 const typeRoutes = require('./routes/typeRoutes');
-const googleRoutes = require('./routes/googleRoutes');
 const outlookRoutes = require('./routes/outlookRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
 const emailRoutes = require('./routes/emailRoutes');
+const authRoutes = require('./routes/authRoutes');
+const goalRoutes = require('./routes/goalRoutes');
 
 console.log('✅ Routes loaded successfully');
 
@@ -80,16 +84,24 @@ app.use(cors({
 app.set("trust proxy", 1);
 
 // Session configuration
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.error('❌ CRITICAL: SESSION_SECRET must be set in production!');
+  console.error('Generate one with: openssl rand -base64 32');
+  process.exit(1);
+}
+
 app.use(session({
   store: sessionStore,
-  secret: process.env.SESSION_SECRET || "your-secret-key",
+  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? null : "dev-secret-key-change-in-production"),
   resave: false,
   saveUninitialized: false,
+  name: 'althy.sid', // Custom session name
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',  // true for HTTPS in production
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: '/' // Ensure cookie is available for all paths
   }
 }));
 
@@ -125,6 +137,8 @@ if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
 }
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/emails', emailRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/goals', goalRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

@@ -45,9 +45,9 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   };
 
-  const toggleTodo = async (index) => {
+  const toggleTodo = async (todoId) => {
     try {
-      const res = await apiFetch(`/api/todos/${index}/toggle`, {
+      const res = await apiFetch(`/api/todos/${todoId}/toggle`, {
         method: 'PATCH',
       });
       if (res.ok) {
@@ -58,7 +58,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   };
 
-  const updateStatus = async (index, status) => {
+  const updateStatus = async (todoId, status) => {
     try {
       let requestBody = { status };
       
@@ -82,7 +82,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
         requestBody.due = forwardDate.toISOString();
       }
       
-      const res = await apiFetch(`/api/todos/${index}/status`, {
+      const res = await apiFetch(`/api/todos/${todoId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
@@ -122,10 +122,10 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   }, [openStatusMenu, openPriorityMenu]);
 
-  const deleteTodo = async (index) => {
+  const deleteTodo = async (todoId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
     try {
-      const res = await apiFetch(`/api/todos/${index}`, {
+      const res = await apiFetch(`/api/todos/${todoId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -209,9 +209,9 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     return '#9ca3af'; // Gray for none
   };
 
-  const updatePriority = async (index, priority) => {
+  const updatePriority = async (todoId, priority) => {
     try {
-      const res = await apiFetch(`/api/todos/${index}/priority`, {
+      const res = await apiFetch(`/api/todos/${todoId}/priority`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priority })
@@ -420,6 +420,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
   };
 
   const renderTask = (todo, index) => {
+    const todoId = todo.id || index; // Use database ID if available, fallback to index
     const todoText = todo.text || todo.toString() || 'Unknown todo';
     const todoCompleted = todo.completed || false;
     const todoDue = todo.due || null;
@@ -553,7 +554,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  await updateStatus(index, 'complete');
+                  await updateStatus(todoId, 'complete');
                 }}
                 style={{
                   padding: '10px 16px',
@@ -580,7 +581,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  await updateStatus(index, 'in_progress');
+                  await updateStatus(todoId, 'in_progress');
                 }}
                 style={{
                   padding: '10px 16px',
@@ -609,7 +610,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  await updateStatus(index, 'forward');
+                  await updateStatus(todoId, 'forward');
                 }}
                 style={{
                   padding: '10px 16px',
@@ -760,7 +761,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   onClick={async (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    await updatePriority(index, 'none');
+                    await updatePriority(todoId, 'none');
                   }}
                   style={{
                     padding: '10px 16px',
@@ -788,7 +789,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   onClick={async (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    await updatePriority(index, 'low');
+                    await updatePriority(todoId, 'low');
                   }}
                   style={{
                     padding: '10px 16px',
@@ -817,7 +818,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   onClick={async (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    await updatePriority(index, 'high');
+                    await updatePriority(todoId, 'high');
                   }}
                   style={{
                     padding: '10px 16px',
@@ -882,7 +883,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                deleteTodo(index);
+                deleteTodo(todoId);
               }}
               style={{
                 background: 'transparent',

@@ -4,7 +4,7 @@
   width: 100%;
   max-width: 100%;
   padding-bottom: 200px;
-  background: white;
+  background: transparent;
   min-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
@@ -133,9 +133,9 @@
 .quick-notes-container {
   position: fixed;
   bottom: 80px;
-  left: 0;
-  right: 0;
-  max-width: 1200px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 420px;
   width: 100%;
   margin: 0 auto;
   padding: 16px;
@@ -143,6 +143,7 @@
   background: white;
   border-top: 1px solid #e5e7eb;
   z-index: 100;
+  box-sizing: border-box;
 }
 
 .quick-notes-container-desktop {

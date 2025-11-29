@@ -1,36 +1,76 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { apiFetch } from '../../api';
 import LoginPage from './LoginPage';
 
-const PASSWORD = 'appaccess';
-const AUTH_KEY = 'althy_app_authenticated';
+const USER_KEY = 'althy_user';
 
 const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
   const [isChecking, setIsChecking] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const authStatus = localStorage.getItem(AUTH_KEY);
-    if (authStatus === 'true') {
-      setIsAuthenticated(true);
-    }
-    setIsChecking(false);
+    // Check authentication status
+    checkAuth();
   }, []);
 
-  const handleLogin = (password) => {
-    if (password === PASSWORD) {
-      localStorage.setItem(AUTH_KEY, 'true');
+  const checkAuth = async () => {
+    try {
+      // First check localStorage
+      const storedUser = localStorage.getItem(USER_KEY);
+      
+      // Then verify with server
+      const res = await apiFetch('/api/auth/me');
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUser(data.user);
+          setIsAuthenticated(true);
+          // Update localStorage with fresh data
+          localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        } else {
+          clearAuth();
+        }
+      } else {
+        // If server says not authenticated, clear local storage
+        clearAuth();
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      // If there's a stored user, allow access (offline mode)
+      const storedUser = localStorage.getItem(USER_KEY);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+          setIsAuthenticated(true);
+        } catch (e) {
+          clearAuth();
+        }
+      } else {
+        clearAuth();
+      }
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const clearAuth = () => {
+    localStorage.removeItem(USER_KEY);
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
+  const handleLogin = (userData) => {
+    if (userData) {
+      setUser(userData);
       setIsAuthenticated(true);
+      localStorage.setItem(USER_KEY, JSON.stringify(userData));
       return true;
     }
     return false;
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    setIsAuthenticated(false);
   };
 
   if (isChecking) {
@@ -51,7 +91,7 @@ const ProtectedRoute = ({ children }) => {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-  // User is authenticated, render protected content
+  // User is authenticated, render protected content with user context
   return <>{children}</>;
 };
 

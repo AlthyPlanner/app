@@ -76,13 +76,18 @@ const MobileMenu = ({ currentPage }) => {
       left: 0,
       right: 0,
       display: 'flex',
-      background: 'white',
-      borderTop: '1px solid #e5e7eb',
-      boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+      background: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderTop: '1px solid rgba(179, 229, 252, 0.2)',
+      boxShadow: '0 -2px 8px rgba(0,0,0,0.05)',
       zIndex: 1002,
       justifyContent: 'space-around',
       padding: '12px 8px',
-      paddingBottom: 'max(12px, env(safe-area-inset-bottom))'
+      paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+      width: '100%',
+      maxWidth: '380px',
+      boxSizing: 'border-box'
     }}>
       {menuItems.map((item) => {
         const active = isActive(item.path);
@@ -95,14 +100,14 @@ const MobileMenu = ({ currentPage }) => {
               flexDirection: 'column',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 12px',
+              padding: '6px 8px',
               background: 'transparent',
               border: 'none',
-              borderRadius: '12px',
+              borderRadius: '10px',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               flex: 1,
-              maxWidth: '120px',
+              maxWidth: '100px',
               color: active ? '#14b8a6' : '#6b7280',
               fontWeight: active ? '600' : '400',
               textDecoration: 'none'
@@ -126,7 +131,7 @@ const MobileMenu = ({ currentPage }) => {
             }}>
               {item.icon}
             </span>
-            <span style={{ fontSize: '12px' }}>{item.label}</span>
+            <span style={{ fontSize: '10px' }}>{item.label}</span>
           </Link>
         );
       })}

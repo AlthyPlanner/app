@@ -78,17 +78,15 @@ const GoalModal = ({ goal, onClose, onSave }) => {
         .map((text, index) => ({ id: index + 1, text, completed: false }));
 
       const goalData = {
-        type,
         title: goalTitle.trim(),
         category,
         target: target.trim() || null,
         deadline: deadline.trim() || null,
         milestones: filteredMilestones,
-        progress: 0
+        progress: goal?.progress || 0
       };
 
-      // In a real app, this would call an API
-      // For now, just call onSave with the data
+      // Call onSave with the data (parent component will handle API call)
       onSave(goalData);
       onClose();
     } catch (err) {

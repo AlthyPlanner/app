@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api';
 import GoalModal from '../modals/GoalModal';
 import './GoalsPage.css';
 
@@ -12,14 +13,32 @@ const GoalsPage = () => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingGoal, setEditingGoal] = useState(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
     window.addEventListener('resize', handleResize);
+    loadGoals();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const loadGoals = async () => {
+    try {
+      setLoading(true);
+      const res = await apiFetch('/api/goals');
+      const data = await res.json();
+      if (res.ok) {
+        setGoals(data.goals || []);
+      }
+    } catch (err) {
+      console.error('Failed to load goals:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -37,9 +56,23 @@ const GoalsPage = () => {
     }
   }, [openMenuId]);
 
-  const handleMarkComplete = (goalId) => {
-    // In a real app, this would update the goal's progress to 100%
-    console.log('Mark as complete:', goalId);
+  const handleMarkComplete = async (goalId) => {
+    try {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      const res = await apiFetch(`/api/goals/${goalId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ progress: 100, status: 'completed' })
+      });
+
+      if (res.ok) {
+        loadGoals();
+      }
+    } catch (err) {
+      console.error('Failed to mark goal as complete:', err);
+    }
     setOpenMenuId(null);
   };
 
@@ -49,87 +82,22 @@ const GoalsPage = () => {
     setShowGoalModal(true);
   };
 
-  const handleDelete = (goalId) => {
+  const handleDelete = async (goalId) => {
     if (window.confirm('Are you sure you want to delete this goal?')) {
-      // In a real app, this would delete the goal
-      console.log('Delete goal:', goalId);
+      try {
+        const res = await apiFetch(`/api/goals/${goalId}`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          loadGoals();
+        }
+      } catch (err) {
+        console.error('Failed to delete goal:', err);
+      }
       setOpenMenuId(null);
     }
   };
-
-  // Sample data matching the design
-  const goals = [
-    {
-      id: 1,
-      title: 'Learn Spanish',
-      category: 'Study',
-      categoryColor: '#10b981',
-      target: 'Conversational fluency',
-      deadline: 'Dec 2025',
-      progress: 45,
-      milestones: [
-        { id: 1, text: 'Complete beginner course', completed: true },
-        { id: 2, text: 'Practice 30 min daily', completed: true },
-        { id: 3, text: 'Hold 5-min conversation', completed: false }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Read 24 Books',
-      category: 'Leisure',
-      categoryColor: '#9333ea',
-      target: '24 books/year',
-      deadline: 'Dec 2025',
-      progress: 33,
-      milestones: [
-        { id: 1, text: 'Read 8 books', completed: true },
-        { id: 2, text: 'Read 16 books', completed: false },
-        { id: 3, text: 'Read 24 books', completed: false }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Run Marathon',
-      category: 'Fitness',
-      categoryColor: '#ef6c00',
-      target: 'Complete 26.2 miles',
-      deadline: 'Jun 2025',
-      progress: 20,
-      milestones: [
-        { id: 1, text: 'Run 5K', completed: true },
-        { id: 2, text: 'Run 10K', completed: false },
-        { id: 3, text: 'Run half marathon', completed: false }
-      ]
-    },
-    {
-      id: 4,
-      title: 'Learn Piano',
-      category: 'Leisure',
-      categoryColor: '#9333ea',
-      target: 'Play 5 songs',
-      deadline: 'Mar 2025',
-      progress: 60,
-      milestones: [
-        { id: 1, text: 'Learn basic chords', completed: true },
-        { id: 2, text: 'Play first song', completed: true },
-        { id: 3, text: 'Master 5 songs', completed: false }
-      ]
-    },
-    {
-      id: 5,
-      title: 'Build Mobile App',
-      category: 'Work',
-      categoryColor: '#3b82f6',
-      target: 'Launch on App Store',
-      deadline: 'Aug 2025',
-      progress: 15,
-      milestones: [
-        { id: 1, text: 'Design mockups', completed: true },
-        { id: 2, text: 'Build MVP', completed: false },
-        { id: 3, text: 'Submit for review', completed: false }
-      ]
-    }
-  ];
 
   const totalGoals = goals.length;
   const totalHabits = 3; // Sample data
@@ -473,16 +441,34 @@ const GoalsPage = () => {
             setShowGoalModal(false);
             setEditingGoal(null);
           }}
-          onSave={(goalData) => {
-            // In a real app, this would save to an API
-            if (editingGoal) {
-              console.log('Updated goal:', goalData);
-            } else {
-              console.log('New goal:', goalData);
+          onSave={async (goalData) => {
+            try {
+              if (editingGoal) {
+                // Update existing goal
+                const res = await apiFetch(`/api/goals/${editingGoal.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(goalData)
+                });
+                if (res.ok) {
+                  loadGoals();
+                }
+              } else {
+                // Create new goal
+                const res = await apiFetch('/api/goals', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(goalData)
+                });
+                if (res.ok) {
+                  loadGoals();
+                }
+              }
+            } catch (err) {
+              console.error('Failed to save goal:', err);
             }
             setShowGoalModal(false);
             setEditingGoal(null);
-            // You could also update the goals state here if needed
           }}
         />
       )}

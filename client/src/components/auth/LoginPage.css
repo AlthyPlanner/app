@@ -152,6 +152,34 @@
   transform: none;
 }
 
+.login-toggle {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.login-toggle-button {
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-size: 0.9rem;
+  font-family: 'Inter Tight', sans-serif;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.login-toggle-button:hover:not(:disabled) {
+  color: #1565c0;
+}
+
+.login-toggle-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .login-footer {
   text-align: center;
   padding-top: 1.5rem;

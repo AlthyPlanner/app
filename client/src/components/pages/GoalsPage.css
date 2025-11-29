@@ -3,7 +3,7 @@
 .goals-page {
   width: 100%;
   max-width: 100%;
-  background: white;
+  background: transparent;
   min-height: calc(100vh - 80px);
   padding-bottom: 120px;
   -webkit-overflow-scrolling: touch;

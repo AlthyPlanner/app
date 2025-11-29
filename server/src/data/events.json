@@ -1,148 +1,5 @@
 [
   {
-    "id": "qsmhmtse",
-    "googleId": "3325ob0a98rcobou352cfk7r4f",
-    "summary": "Demo at AI Tinkerers",
-    "start": "2025-11-17T18:00:00-05:00",
-    "end": "2025-11-17T20:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "y3rxi1ko",
-    "googleId": "7nrms4b2s5c5fjjpu6ad0v2pik",
-    "summary": "Work",
-    "start": "2025-11-18T09:00:00-05:00",
-    "end": "2025-11-18T16:30:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "5gcupcg6",
-    "googleId": "7ivg0op5832kvm071qu06vveio",
-    "summary": "Evening Class",
-    "start": "2025-11-18T18:00:00-05:00",
-    "end": "2025-11-18T21:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "study"
-  },
-  {
-    "id": "ow435j9o",
-    "googleId": "210d3vp1e2ranv9vun3qq16qc7",
-    "summary": "Work",
-    "start": "2025-11-19T09:00:00-05:00",
-    "end": "2025-11-19T16:30:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "mh7h8xs3",
-    "googleId": "lfh29ioh8l6p4oqutnhcck2hm4",
-    "summary": "Meet with Jing (Alec Hawley)",
-    "start": "2025-11-19T17:30:00-05:00",
-    "end": "2025-11-19T18:00:00-05:00",
-    "description": "<b>Booked by</b>\nAlec Hawley\nalecdhawley@gmail.com",
-    "location": "",
-    "source": "google",
-    "category": "travel"
-  },
-  {
-    "id": "rjdgwkse",
-    "googleId": "034dhaghtd9qn1sa4fctn6grrk",
-    "summary": "Dinner with friends",
-    "start": "2025-11-19T18:30:00-05:00",
-    "end": "2025-11-19T19:30:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "leisure"
-  },
-  {
-    "id": "5h8ilone",
-    "googleId": "1bm75f5q9njdsmmj2elmut98qh",
-    "summary": "Work",
-    "start": "2025-11-20T09:00:00-05:00",
-    "end": "2025-11-20T16:30:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "cwkgf6in",
-    "googleId": "6kdc21c0ntnn2eb7ualfuvqb0c",
-    "summary": "Entreprenuership workshop",
-    "start": "2025-11-20T18:00:00-05:00",
-    "end": "2025-11-20T21:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "study"
-  },
-  {
-    "id": "1ryc66qt",
-    "googleId": "54rpjei6jrkqgfk5461fpfi25n",
-    "summary": "Work",
-    "start": "2025-11-21T09:00:00-05:00",
-    "end": "2025-11-21T16:30:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "4mbu0r5t",
-    "googleId": "31v32vgm2eg3oah3jc7p1qq590",
-    "summary": "Gym",
-    "start": "2025-11-21T17:00:00-05:00",
-    "end": "2025-11-21T18:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "fitness"
-  },
-  {
-    "id": "xkwe19k7",
-    "googleId": "79sg29g2ai403arjab5d621coo",
-    "summary": "Lunch with mom",
-    "start": "2025-11-22T12:00:00-05:00",
-    "end": "2025-11-22T13:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "leisure"
-  },
-  {
-    "id": "4p9qex3k",
-    "googleId": "5kf1l7gu5va2ap3pdcuabbj5t1",
-    "summary": "Museum visit",
-    "start": "2025-11-22T15:00:00-05:00",
-    "end": "2025-11-22T16:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "travel"
-  },
-  {
-    "id": "t33o9pl3",
-    "googleId": "1lg11haq18ut424csvq55aqs42",
-    "summary": "UI Discussion",
-    "start": "2025-11-20T17:30:00-05:00",
-    "end": "2025-11-20T18:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
     "id": "0zx8uip0",
     "summary": "Walk 1 mile",
     "start": "2025-11-19T02:30:00.000Z",
@@ -161,95 +18,7 @@
     "category": "fitness"
   },
   {
-    "id": "wlisrpgs",
-    "googleId": "4nq1u9o816hjmm3quv5otsc0hi",
-    "summary": "Althy UI Discussion",
-    "start": "2025-11-24T20:00:00-05:00",
-    "end": "2025-11-24T20:45:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "mwgw5i58",
-    "googleId": "19afc61qt716s22hf2kk09epr3_20251125T133000Z",
-    "summary": "Work",
-    "start": "2025-11-25T08:30:00-05:00",
-    "end": "2025-11-25T16:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "xz8d6aeh",
-    "googleId": "05no483gplgphgku2nkdoif8g1",
-    "summary": "Evening Class",
-    "start": "2025-11-25T18:00:00-05:00",
-    "end": "2025-11-25T21:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "study"
-  },
-  {
-    "id": "asattcds",
-    "googleId": "19afc61qt716s22hf2kk09epr3_20251126T133000Z",
-    "summary": "Work",
-    "start": "2025-11-26T08:30:00-05:00",
-    "end": "2025-11-26T16:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "aknbsnyu",
-    "googleId": "1go4gpqtjadq4uh106tsfvllkq",
-    "summary": "Team meeting",
-    "start": "2025-11-26T20:00:00-05:00",
-    "end": "2025-11-26T21:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "g8t9xfmz",
-    "googleId": "19afc61qt716s22hf2kk09epr3_20251127T133000Z",
-    "summary": "Work",
-    "start": "2025-11-27T08:30:00-05:00",
-    "end": "2025-11-27T16:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "rdqu35an",
-    "googleId": "47481nfn67nh02ri81vqkob2au",
-    "summary": "Workshop",
-    "start": "2025-11-27T18:00:00-05:00",
-    "end": "2025-11-27T21:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "study"
-  },
-  {
-    "id": "ub5tgmzl",
-    "googleId": "19afc61qt716s22hf2kk09epr3_20251128T133000Z",
-    "summary": "Work",
-    "start": "2025-11-28T08:30:00-05:00",
-    "end": "2025-11-28T16:00:00-05:00",
-    "description": "",
-    "location": "",
-    "source": "google",
-    "category": "work"
-  },
-  {
-    "id": "a8ikccvc",
+    "id": "mgs15d7m",
     "googleId": "3jlpffpefiee9poiabht3vr69l",
     "summary": "Leisure",
     "start": "2025-11-29T14:00:00-05:00",
@@ -260,7 +29,7 @@
     "category": "rest"
   },
   {
-    "id": "vtjs6h7u",
+    "id": "mi7lscy3",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251201T133000Z",
     "summary": "Work",
     "start": "2025-12-01T08:30:00-05:00",
@@ -271,7 +40,7 @@
     "category": "work"
   },
   {
-    "id": "o6i01ab3",
+    "id": "y9hodzm9",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251202T133000Z",
     "summary": "Work",
     "start": "2025-12-02T08:30:00-05:00",
@@ -282,7 +51,7 @@
     "category": "work"
   },
   {
-    "id": "h8n5g99c",
+    "id": "x8i9io9s",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251203T133000Z",
     "summary": "Work",
     "start": "2025-12-03T08:30:00-05:00",
@@ -293,7 +62,7 @@
     "category": "work"
   },
   {
-    "id": "0ia4vy66",
+    "id": "5j2k15ie",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251204T133000Z",
     "summary": "Work",
     "start": "2025-12-04T08:30:00-05:00",
@@ -304,7 +73,7 @@
     "category": "work"
   },
   {
-    "id": "5fyiih3w",
+    "id": "5t3yu7hj",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251205T133000Z",
     "summary": "Work",
     "start": "2025-12-05T08:30:00-05:00",
@@ -315,7 +84,7 @@
     "category": "work"
   },
   {
-    "id": "u8cnv580",
+    "id": "d47pbajt",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251208T133000Z",
     "summary": "Work",
     "start": "2025-12-08T08:30:00-05:00",
@@ -326,7 +95,7 @@
     "category": "work"
   },
   {
-    "id": "9s29rgcy",
+    "id": "nwfx3toz",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251209T133000Z",
     "summary": "Work",
     "start": "2025-12-09T08:30:00-05:00",
@@ -337,7 +106,7 @@
     "category": "work"
   },
   {
-    "id": "xy831byj",
+    "id": "u71ds4tt",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251210T133000Z",
     "summary": "Work",
     "start": "2025-12-10T08:30:00-05:00",
@@ -348,7 +117,7 @@
     "category": "work"
   },
   {
-    "id": "ydgsouvx",
+    "id": "2348w2i4",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251211T133000Z",
     "summary": "Work",
     "start": "2025-12-11T08:30:00-05:00",
@@ -359,7 +128,7 @@
     "category": "work"
   },
   {
-    "id": "ih16sw3d",
+    "id": "rt07f6nk",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251212T133000Z",
     "summary": "Work",
     "start": "2025-12-12T08:30:00-05:00",
@@ -370,7 +139,7 @@
     "category": "work"
   },
   {
-    "id": "foc34hgt",
+    "id": "no4cna99",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251215T133000Z",
     "summary": "Work",
     "start": "2025-12-15T08:30:00-05:00",
@@ -381,7 +150,7 @@
     "category": "work"
   },
   {
-    "id": "c1f5adwq",
+    "id": "r2zpibio",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251216T133000Z",
     "summary": "Work",
     "start": "2025-12-16T08:30:00-05:00",
@@ -392,7 +161,7 @@
     "category": "work"
   },
   {
-    "id": "acxeeqcc",
+    "id": "pmu0pffv",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251217T133000Z",
     "summary": "Work",
     "start": "2025-12-17T08:30:00-05:00",
@@ -403,7 +172,7 @@
     "category": "work"
   },
   {
-    "id": "v9vqonug",
+    "id": "vf3fvxpm",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251218T133000Z",
     "summary": "Work",
     "start": "2025-12-18T08:30:00-05:00",
@@ -414,7 +183,7 @@
     "category": "work"
   },
   {
-    "id": "hq0sspzz",
+    "id": "dx0c5cxd",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251219T133000Z",
     "summary": "Work",
     "start": "2025-12-19T08:30:00-05:00",
@@ -425,7 +194,7 @@
     "category": "work"
   },
   {
-    "id": "1zjb3pai",
+    "id": "yq283yaz",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251222T133000Z",
     "summary": "Work",
     "start": "2025-12-22T08:30:00-05:00",
@@ -436,7 +205,7 @@
     "category": "work"
   },
   {
-    "id": "ywdnlapp",
+    "id": "aw67mb0i",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251223T133000Z",
     "summary": "Work",
     "start": "2025-12-23T08:30:00-05:00",
@@ -447,7 +216,7 @@
     "category": "work"
   },
   {
-    "id": "xacla6fx",
+    "id": "y2z1yk56",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251224T133000Z",
     "summary": "Work",
     "start": "2025-12-24T08:30:00-05:00",
@@ -455,6 +224,37 @@
     "description": "",
     "location": "",
     "source": "google",
+    "category": "work"
+  },
+  {
+    "id": "le4wk6et",
+    "googleId": "19afc61qt716s22hf2kk09epr3_20251225T133000Z",
+    "summary": "Work",
+    "start": "2025-12-25T08:30:00-05:00",
+    "end": "2025-12-25T16:00:00-05:00",
+    "description": "",
+    "location": "",
+    "source": "google",
+    "category": "work"
+  },
+  {
+    "id": "qy1ipe4a",
+    "googleId": "19afc61qt716s22hf2kk09epr3_20251226T133000Z",
+    "summary": "Work",
+    "start": "2025-12-26T08:30:00-05:00",
+    "end": "2025-12-26T16:00:00-05:00",
+    "description": "",
+    "location": "",
+    "source": "google",
+    "category": "work"
+  },
+  {
+    "id": "4f0xkb52",
+    "summary": "Test Event",
+    "start": "2025-12-01T10:00:00Z",
+    "end": "2025-12-01T11:00:00Z",
+    "description": "",
+    "location": "",
     "category": "work"
   }
 ]
