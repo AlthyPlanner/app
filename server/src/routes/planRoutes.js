@@ -1,13 +1,30 @@
-function normalizeDay(day) {
-  const days = {
+ function normalizeDay(day) {
+  const cleaned = day.trim().toLowerCase().replace(/[^a-z]/g, "");
+
+  const map = {
     monday: 0,
+    mon: 0,
     tuesday: 1,
+    tue: 1,
     wednesday: 2,
+    wed: 2,
     thursday: 3,
+    thu: 3,
     friday: 4,
+    fri: 4,
     saturday: 5,
+    sat: 5,
     sunday: 6,
+    sun: 6
   };
+
+  if (!(cleaned in map)) {
+    throw new Error("Invalid day: " + day);
+  }
+
+  return map[cleaned];
+}
+
 
   const key = day.trim().toLowerCase();
 
