@@ -74,7 +74,9 @@ const chatController = {
       // Step 1: Process action (task/event creation) if needed
       let actionResult = null;
       try {
-        actionResult = await chatActionService.processAction(prompt);
+        // Get userId from session if authenticated
+        const userId = req.user && req.user.id ? req.user.id : null;
+        actionResult = await chatActionService.processAction(prompt, userId);
         if (actionResult) {
           console.log('Action result:', JSON.stringify(actionResult, null, 2));
         }

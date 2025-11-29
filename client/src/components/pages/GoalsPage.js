@@ -21,6 +21,7 @@ const GoalsPage = () => {
       setIsMobile(window.innerWidth < 768);
     };
     window.addEventListener('resize', handleResize);
+    loadGoals();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -49,16 +50,12 @@ const GoalsPage = () => {
     try {
       setLoading(true);
       const res = await apiFetch('/api/goals');
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setGoals(data.goals || []);
-      } else {
-        console.error('Failed to load goals');
-        setGoals([]);
       }
     } catch (err) {
-      console.error('Error loading goals:', err);
-      setGoals([]);
+      console.error('Failed to load goals:', err);
     } finally {
       setLoading(false);
     }
@@ -83,13 +80,16 @@ const GoalsPage = () => {
   const handleMarkComplete = async (goalId) => {
     try {
       const goal = goals.find(g => g.id === goalId);
-      if (goal) {
-        await apiFetch(`/api/goals/${goalId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...goal, progress: 100 })
-        });
-        await loadGoals();
+      if (!goal) return;
+
+      const res = await apiFetch(`/api/goals/${goalId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ progress: 100, status: 'completed' })
+      });
+
+      if (res.ok) {
+        loadGoals();
       }
     } catch (err) {
       console.error('Failed to mark goal as complete:', err);
@@ -109,8 +109,9 @@ const GoalsPage = () => {
         const res = await apiFetch(`/api/goals/${goalId}`, {
           method: 'DELETE'
         });
+
         if (res.ok) {
-          await loadGoals();
+          loadGoals();
         }
       } catch (err) {
         console.error('Failed to delete goal:', err);
@@ -137,13 +138,13 @@ const GoalsPage = () => {
   // Filter and sort goals
   const filteredGoals = goals.filter(goal => {
     if (activeTab === 'goals') {
-      return goal.type === 'goal';
+      return goal.type === 'goal' || !goal.type; // Include goals without type for backward compatibility
     } else {
       return goal.type === 'habit';
     }
   }).map(goal => ({
     ...goal,
-    categoryColor: getCategoryColor(goal.category)
+    categoryColor: goal.categoryColor || getCategoryColor(goal.category)
   }));
 
   // Sort goals
@@ -162,7 +163,7 @@ const GoalsPage = () => {
   });
 
   // Calculate stats
-  const totalGoals = goals.filter(g => g.type === 'goal').length;
+  const totalGoals = goals.filter(g => g.type === 'goal' || !g.type).length;
   const totalHabits = goals.filter(g => g.type === 'habit').length;
   const completedGoals = goals.filter(g => g.progress === 100).length;
   const totalMilestones = goals.reduce((sum, g) => sum + (g.milestones?.length || 0), 0);
@@ -527,7 +528,7 @@ const GoalsPage = () => {
                   body: JSON.stringify(goalData)
                 });
                 if (res.ok) {
-                  await loadGoals();
+                  loadGoals();
                 }
               } else {
                 // Create new goal
@@ -537,7 +538,7 @@ const GoalsPage = () => {
                   body: JSON.stringify(goalData)
                 });
                 if (res.ok) {
-                  await loadGoals();
+                  loadGoals();
                 }
               }
             } catch (err) {

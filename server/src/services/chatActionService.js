@@ -2,6 +2,8 @@ const { OpenAI } = require('openai');
 const Todo = require('../models/Todo');
 const Calendar = require('../models/Calendar');
 const Goal = require('../models/Goal');
+const Task = require('../models/Task');
+const Event = require('../models/Event');
 
 let openai = null;
 
@@ -122,9 +124,10 @@ Respond with ONLY a JSON object:
   /**
    * Create a task from natural language
    * @param {string} prompt - User message
+   * @param {number|null} userId - User ID if authenticated, null otherwise
    * @returns {Promise<Object>} - Action result with success status and message
    */
-  async createTask(prompt) {
+  async createTask(prompt, userId = null) {
     // Calculate current date information for the prompt
     const now = new Date();
     const todayYear = now.getFullYear();
@@ -151,16 +154,18 @@ When the user says "tomorrow", use exactly: ${tomorrow}
 
 Extract:
 - todo: the task title/description (required). Include the full task description. For example, "add task of running 1 mile tomorrow at 8am" should extract "running 1 mile" as the todo.
-- due: due date in YYYY-MM-DD format or null if not specified. Use the exact dates provided above for "today" or "tomorrow". If a time is mentioned (like "8am"), use just the date, ignore the time.
+- due: due date in YYYY-MM-DD format or null if not specified. Use the exact dates provided above for "today" or "tomorrow".
+- dueTime: time in HH:mm format using 24-hour format (e.g., "14:00" for 2pm, "08:00" for 8am) or null if no time is mentioned. Extract the time if mentioned (e.g., "8am", "2pm", "14:00").
 - priority: "high", "low", or "none" (look for words like urgent, important, high priority, or low priority)
 - category: one of "work", "study", "personal", "leisure", "fitness", "health", "travel", "rest", or empty string. Infer from the task description if possible (e.g., "running" -> "fitness", "study" -> "study", "meeting" -> "work")
 
 Examples:
-- "add task of running 1 mile tomorrow at 8am" -> {"todo": "running 1 mile", "due": "${tomorrow}", "priority": "none", "category": "fitness"}
-- "add task: buy groceries" -> {"todo": "buy groceries", "due": null, "priority": "none", "category": "personal"}
+- "add task of running 1 mile tomorrow at 8am" -> {"todo": "running 1 mile", "due": "${tomorrow}", "dueTime": "08:00", "priority": "none", "category": "fitness"}
+- "add task: buy groceries today at 2pm" -> {"todo": "buy groceries", "due": "${today}", "dueTime": "14:00", "priority": "none", "category": "personal"}
+- "add task: buy groceries" -> {"todo": "buy groceries", "due": null, "dueTime": null, "priority": "none", "category": "personal"}
 
 Respond with ONLY a JSON object in this exact format:
-{"todo": "task title", "due": "2024-12-15" or null or "${today}" or "${tomorrow}", "priority": "high"|"low"|"none", "category": "work"|"study"|"personal"|"leisure"|"fitness"|"health"|"travel"|"rest"|""}`;
+{"todo": "task title", "due": "2024-12-15" or null or "${today}" or "${tomorrow}", "dueTime": "08:00" or null, "priority": "high"|"low"|"none", "category": "work"|"study"|"personal"|"leisure"|"fitness"|"health"|"travel"|"rest"|""}`;
 
     try {
       const openaiClient = getOpenAI();
@@ -225,15 +230,61 @@ Respond with ONLY a JSON object in this exact format:
         // (it should match the dates we provided in the prompt)
       }
       
+      // Parse dueTime if provided
+      let dueTime = null;
+      if (parsedData.dueTime && dueDate) {
+        try {
+          // Parse time string (HH:mm format)
+          const [hours, minutes] = parsedData.dueTime.split(':').map(Number);
+          if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+            // Create a date-time object combining due date and due time
+            const [year, month, day] = dueDate.split('-').map(Number);
+            dueTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+            console.log('Parsed dueTime:', dueTime.toISOString());
+          }
+        } catch (timeErr) {
+          console.warn('Error parsing dueTime:', timeErr);
+        }
+      }
+      
       console.log('Final due date being saved:', dueDate);
+      console.log('Due time being saved:', dueTime ? dueTime.toISOString() : null);
 
       try {
-        const newTodo = await Todo.create({
-          todo: parsedData.todo.trim(),
-          due: dueDate || null,
-          category: parsedData.category || '',
-          priority: parsedData.priority || 'none'
-        });
+        let newTodo;
+        
+        // If userId is provided, use database Task model
+        if (userId) {
+          try {
+            newTodo = await Task.create(userId, {
+              todo: parsedData.todo.trim(),
+              due: dueDate || null,
+              due_time: dueTime,
+              category: parsedData.category || '',
+              priority: parsedData.priority || 'none',
+              status: null
+            });
+            console.log('✅ Task created in database:', newTodo);
+          } catch (dbErr) {
+            console.error('Database error creating task:', dbErr);
+            // Fallback to file-based storage
+            console.log('Falling back to file-based Todo storage');
+            newTodo = await Todo.create({
+              todo: parsedData.todo.trim(),
+              due: dueDate || null,
+              category: parsedData.category || '',
+              priority: parsedData.priority || 'none'
+            });
+          }
+        } else {
+          // No userId, use file-based storage
+          newTodo = await Todo.create({
+            todo: parsedData.todo.trim(),
+            due: dueDate || null,
+            category: parsedData.category || '',
+            priority: parsedData.priority || 'none'
+          });
+        }
 
         return {
           type: 'task',
@@ -242,7 +293,7 @@ Respond with ONLY a JSON object in this exact format:
           data: newTodo
         };
       } catch (createErr) {
-        console.error('Error creating task in database:', createErr);
+        console.error('Error creating task:', createErr);
         return {
           type: 'task',
           success: false,
@@ -263,9 +314,10 @@ Respond with ONLY a JSON object in this exact format:
   /**
    * Create an event from natural language
    * @param {string} prompt - User message
+   * @param {number|null} userId - User ID if authenticated, null otherwise
    * @returns {Promise<Object>} - Action result with success status and message
    */
-  async createEvent(prompt) {
+  async createEvent(prompt, userId = null) {
     const now = new Date();
     // Get today's date in local timezone (YYYY-MM-DD)
     const todayYear = now.getFullYear();
@@ -444,12 +496,41 @@ Respond with ONLY a JSON object in this exact format:
         };
       }
 
-      const newEvent = await Calendar.createEvent({
-        summary: parsedData.summary.trim(),
-        start: startTime.toISOString(),
-        end: endTime.toISOString(),
-        category: parsedData.category || 'work'
-      });
+      let newEvent;
+      
+      // If userId is provided, use database Event model
+      if (userId) {
+        try {
+          newEvent = await Event.create(userId, {
+            summary: parsedData.summary.trim(),
+            start: startTime.toISOString(),
+            end: endTime.toISOString(),
+            category: parsedData.category || 'work',
+            location: null,
+            description: null,
+            source: 'chat'
+          });
+          console.log('✅ Event created in database:', newEvent);
+        } catch (dbErr) {
+          console.error('Database error creating event:', dbErr);
+          // Fallback to file-based storage
+          console.log('Falling back to file-based Calendar storage');
+          newEvent = await Calendar.createEvent({
+            summary: parsedData.summary.trim(),
+            start: startTime.toISOString(),
+            end: endTime.toISOString(),
+            category: parsedData.category || 'work'
+          });
+        }
+      } else {
+        // No userId, use file-based storage
+        newEvent = await Calendar.createEvent({
+          summary: parsedData.summary.trim(),
+          start: startTime.toISOString(),
+          end: endTime.toISOString(),
+          category: parsedData.category || 'work'
+        });
+      }
 
       console.log('Event created successfully:', newEvent);
       return {
@@ -577,9 +658,10 @@ Respond with ONLY a JSON object in this exact format:
   /**
    * Process chat message and create task/event/goal if needed
    * @param {string} prompt - User message
+   * @param {number|null} userId - User ID if authenticated, null otherwise
    * @returns {Promise<Object|null>} - Action result or null if no action needed
    */
-  async processAction(prompt) {
+  async processAction(prompt, userId = null) {
     const intent = await this.detectIntent(prompt);
     
     if (intent === 'task') {
@@ -597,9 +679,9 @@ Respond with ONLY a JSON object in this exact format:
       }
       
       // Has enough info, proceed to create
-      return await this.createTask(prompt);
+      return await this.createTask(prompt, userId);
     } else if (intent === 'event') {
-      return await this.createEvent(prompt);
+      return await this.createEvent(prompt, userId);
     } else if (intent === 'goal') {
       return await this.createGoal(prompt);
     }

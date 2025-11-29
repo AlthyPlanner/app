@@ -1,0 +1,121 @@
+/* App Layout Styles - Matching Login Page Design */
+
+.app-layout-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Beautiful gradient background matching login page */
+.app-background-gradient {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  z-index: 0;
+}
+
+/* Phone frame simulation */
+.app-phone-frame {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1),
+              0 0 0 1px rgba(179, 229, 252, 0.2);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Content container */
+.app-content-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Main content area */
+.app-main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(179, 229, 252, 0.3) transparent;
+}
+
+.app-main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-main-content::-webkit-scrollbar-thumb {
+  background: rgba(179, 229, 252, 0.3);
+  border-radius: 3px;
+}
+
+.app-main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(179, 229, 252, 0.5);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .app-layout-wrapper {
+    padding: 0.5rem;
+  }
+
+  .app-phone-frame {
+    border-radius: 20px;
+    max-width: 100%;
+    min-height: 100vh;
+  }
+}
+
+@media (max-width: 375px) {
+  .app-phone-frame {
+    border-radius: 16px;
+  }
+}
+
+/* Ensure smooth transitions */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+

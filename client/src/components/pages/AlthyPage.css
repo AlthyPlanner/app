@@ -2,7 +2,7 @@
 
 .althy-page {
   min-height: calc(100vh - 100px);
-  background: white;
+  background: transparent;
   display: flex;
   flex-direction: column;
   padding-top: 148px; /* Default: mobile logo (80) + button (68) */

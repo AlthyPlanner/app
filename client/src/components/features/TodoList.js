@@ -9,6 +9,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editText, setEditText] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
+  const [editDueTime, setEditDueTime] = useState('');
   const [editType, setEditType] = useState('');
   const [editPriority, setEditPriority] = useState('none');
   const [openStatusMenu, setOpenStatusMenu] = useState(null);
@@ -45,9 +46,9 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   };
 
-  const toggleTodo = async (index) => {
+  const toggleTodo = async (todoId) => {
     try {
-      const res = await apiFetch(`/api/todos/${index}/toggle`, {
+      const res = await apiFetch(`/api/todos/${todoId}/toggle`, {
         method: 'PATCH',
       });
       if (res.ok) {
@@ -58,7 +59,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   };
 
-  const updateStatus = async (index, status) => {
+  const updateStatus = async (todoId, status) => {
     try {
       let requestBody = { status };
       
@@ -82,7 +83,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
         requestBody.due = forwardDate.toISOString();
       }
       
-      const res = await apiFetch(`/api/todos/${index}/status`, {
+      const res = await apiFetch(`/api/todos/${todoId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
@@ -122,10 +123,10 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   }, [openStatusMenu, openPriorityMenu]);
 
-  const deleteTodo = async (index) => {
+  const deleteTodo = async (todoId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
     try {
-      const res = await apiFetch(`/api/todos/${index}`, {
+      const res = await apiFetch(`/api/todos/${todoId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -162,27 +163,24 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getDueText = (dateString) => {
+  const getDueText = (dateString, dueTimeString = null) => {
     const daysUntilDue = getDaysUntilDue(dateString);
     if (daysUntilDue === null) return { text: '', color: '#666', hours: null };
     
-    // Parse date string - handle YYYY-MM-DD format as local timezone (not UTC)
-    let dueDate;
-    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      // Date-only string (YYYY-MM-DD) - parse as local timezone
-      const [year, month, day] = dateString.split('-').map(Number);
-      dueDate = new Date(year, month - 1, day);
-    } else {
-      // ISO string or other format - parse normally
-      dueDate = new Date(dateString);
+    // Parse due_time if provided (from database)
+    let timeStr = null;
+    if (dueTimeString) {
+      try {
+        const dueTimeDate = new Date(dueTimeString);
+        if (!isNaN(dueTimeDate.getTime())) {
+          const hours = dueTimeDate.getHours();
+          const minutes = dueTimeDate.getMinutes();
+          timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+      } catch (e) {
+        console.warn('Error parsing due_time:', e);
+      }
     }
-    
-    // Tasks typically don't have times, so don't show time unless it's explicitly set
-    const hasTime = dueDate.getHours() !== 0 || dueDate.getMinutes() !== 0 || 
-                   (typeof dateString === 'string' && dateString.includes('T'));
-    const hours = dueDate.getHours();
-    const minutes = dueDate.getMinutes();
-    const timeStr = hasTime ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : null;
     
     let text, color;
     if (daysUntilDue < 0) {
@@ -202,7 +200,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
       color = '#6b7280';
     }
     
-    return { text, color, hours: (daysUntilDue === 0 && hasTime) ? timeStr : null };
+    return { text, color, hours: timeStr };
   };
 
   const getPriorityColor = (daysUntilDue) => {
@@ -238,9 +236,9 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     return '#9ca3af'; // Gray for none
   };
 
-  const updatePriority = async (index, priority) => {
+  const updatePriority = async (todoId, priority) => {
     try {
-      const res = await apiFetch(`/api/todos/${index}/priority`, {
+      const res = await apiFetch(`/api/todos/${todoId}/priority`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priority })
@@ -376,10 +374,12 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
         // Get the start of this week (Sunday)
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay());
-        // Get the end of this week (Saturday)
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
+        weekStart.setHours(0, 0, 0, 0);
+        // Get the end of next 7 days from today
+        const weekEnd = new Date(today);
+        weekEnd.setDate(today.getDate() + 7);
         weekEnd.setHours(23, 59, 59, 999);
+        // Include tasks from this week start to 7 days from today
         return dueDate >= weekStart && dueDate <= weekEnd;
       } else if (effectiveDateFilter === 'nextWeek') {
         // Get the start of next week (Sunday)
@@ -430,7 +430,16 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
         return;
       }
 
-      const dueDate = new Date(todo.due);
+      // Parse date string - handle YYYY-MM-DD format as local timezone (not UTC)
+      let dueDate;
+      if (typeof todo.due === 'string' && todo.due.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Date-only string (YYYY-MM-DD) - parse as local timezone
+        const [year, month, day] = todo.due.split('-').map(Number);
+        dueDate = new Date(year, month - 1, day);
+      } else {
+        // ISO string or other format - parse normally
+        dueDate = new Date(todo.due);
+      }
       dueDate.setHours(0, 0, 0, 0);
 
       if (dueDate.getTime() === today.getTime()) {
@@ -475,14 +484,16 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
   };
 
   const renderTask = (todo, index) => {
+    const todoId = todo.id || index; // Use database ID if available, fallback to index
     const todoText = todo.text || todo.toString() || 'Unknown todo';
     const todoCompleted = todo.completed || false;
     const todoDue = todo.due || null;
+    const todoDueTime = todo.due_time || null; // Get due_time from database
     const todoType = todo.type || todo.category || '';
     const todoStatus = todo.status || null;
     const todoPriority = todo.priority || 'none';
     const daysUntilDue = getDaysUntilDue(todoDue);
-    const dueInfo = getDueText(todoDue);
+    const dueInfo = getDueText(todoDue, todoDueTime);
     const dueDatePriorityColor = getPriorityColor(daysUntilDue);
     const priorityFlagColor = getPriorityFlagColor(todoPriority);
     const tagColor = getTagColor(todoType);
@@ -608,7 +619,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  await updateStatus(index, 'complete');
+                  await updateStatus(todoId, 'complete');
                 }}
                 style={{
                   padding: '10px 16px',
@@ -635,7 +646,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  await updateStatus(index, 'in_progress');
+                  await updateStatus(todoId, 'in_progress');
                 }}
                 style={{
                   padding: '10px 16px',
@@ -664,7 +675,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  await updateStatus(index, 'forward');
+                  await updateStatus(todoId, 'forward');
                 }}
                 style={{
                   padding: '10px 16px',
@@ -815,7 +826,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   onClick={async (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    await updatePriority(index, 'none');
+                    await updatePriority(todoId, 'none');
                   }}
                   style={{
                     padding: '10px 16px',
@@ -843,7 +854,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   onClick={async (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    await updatePriority(index, 'low');
+                    await updatePriority(todoId, 'low');
                   }}
                   style={{
                     padding: '10px 16px',
@@ -872,7 +883,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   onClick={async (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    await updatePriority(index, 'high');
+                    await updatePriority(todoId, 'high');
                   }}
                   style={{
                     padding: '10px 16px',
@@ -912,9 +923,23 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingIndex(index);
+                setEditingIndex(todoId);
                 setEditText(todoText);
-                setEditDueDate(todoDue ? new Date(todoDue).toISOString().slice(0, 16) : '');
+                // Set due date (date-only, YYYY-MM-DD format)
+                if (todoDue) {
+                  setEditDueDate(todoDue.split('T')[0] || todoDue.slice(0, 10));
+                } else {
+                  setEditDueDate('');
+                }
+                // Set due time from due_time field (HH:mm format)
+                if (todo.due_time) {
+                  const dueTimeDate = new Date(todo.due_time);
+                  const hours = String(dueTimeDate.getHours()).padStart(2, '0');
+                  const minutes = String(dueTimeDate.getMinutes()).padStart(2, '0');
+                  setEditDueTime(`${hours}:${minutes}`);
+                } else {
+                  setEditDueTime('');
+                }
                 setEditType(todoType);
                 setEditPriority(todoPriority);
               }}
@@ -937,7 +962,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                deleteTodo(index);
+                deleteTodo(todoId);
               }}
               style={{
                 background: 'transparent',
@@ -1114,7 +1139,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
             fontWeight: '600',
             color: '#1f2937'
           }}>
-            {viewMode === 'all' ? 'All' : 'Today'} ({activeTodos.length})
+            {viewMode === 'all' ? 'All' : viewMode === 'thisWeek' ? 'This week' : 'Today'} ({activeTodos.length})
           </h3>
           <div>
             {activeTodos.map((todo, index) => {
@@ -1275,7 +1300,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 ))}
               </select>
               <input
-                type="datetime-local"
+                type="date"
                 value={editDueDate}
                 onChange={(e) => setEditDueDate(e.target.value)}
                 style={{
@@ -1288,6 +1313,22 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                   boxSizing: 'border-box'
                 }}
               />
+              {editDueDate && (
+                <input
+                  type="time"
+                  value={editDueTime}
+                  onChange={(e) => setEditDueTime(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              )}
               <select
                 value={editPriority}
                 onChange={(e) => setEditPriority(e.target.value)}
@@ -1326,15 +1367,32 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
                 <button
                   onClick={async () => {
                     try {
+                      // Combine due date and time into due_time if both are provided
+                      let dueTimeValue = null;
+                      if (editDueDate && editDueTime) {
+                        // Combine date and time into a datetime string (local timezone)
+                        const [hours, minutes] = editDueTime.split(':').map(Number);
+                        const dateTime = new Date(editDueDate);
+                        dateTime.setHours(hours, minutes, 0, 0);
+                        dueTimeValue = dateTime.toISOString();
+                      }
+                      
+                      const requestBody = {
+                        todo: editText,
+                        due: editDueDate || null,
+                        type: editType || '',
+                        priority: editPriority || 'none'
+                      };
+                      
+                      // Only include due_time if it's set
+                      if (dueTimeValue) {
+                        requestBody.due_time = dueTimeValue;
+                      }
+                      
                       const res = await apiFetch(`/api/todos/${editingIndex}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          todo: editText,
-                          due: editDueDate || null,
-                          type: editType || '',
-                          priority: editPriority || 'none'
-                        }),
+                        body: JSON.stringify(requestBody),
                       });
                       if (res.ok) {
                         setEditingIndex(null);

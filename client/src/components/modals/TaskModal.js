@@ -4,6 +4,7 @@ import { apiFetch } from '../../api';
 const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' }) => {
   const [taskText, setTaskText] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
   const [category, setCategory] = useState('');
   const [goal, setGoal] = useState('');
   const [priority, setPriority] = useState('none');
@@ -18,7 +19,21 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
   useEffect(() => {
     if (task) {
       setTaskText(task.text || '');
-      setDueDate(task.due ? new Date(task.due).toISOString().slice(0, 16) : '');
+      // Set due date (date-only, YYYY-MM-DD format)
+      if (task.due) {
+        setDueDate(task.due.split('T')[0] || task.due.slice(0, 10));
+      } else {
+        setDueDate('');
+      }
+      // Set due time from due_time field (HH:mm format)
+      if (task.due_time) {
+        const dueTimeDate = new Date(task.due_time);
+        const hours = String(dueTimeDate.getHours()).padStart(2, '0');
+        const minutes = String(dueTimeDate.getMinutes()).padStart(2, '0');
+        setDueTime(`${hours}:${minutes}`);
+      } else {
+        setDueTime('');
+      }
       setCategory(task.category || '');
       setGoal(task.goal || '');
       setPriority(task.priority || 'none');
@@ -28,6 +43,7 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
       // Reset for new task
       setTaskText('');
       setDueDate('');
+      setDueTime('');
       setCategory('');
       setGoal('');
       setPriority('none');
@@ -101,14 +117,26 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
     return diffDays;
   };
 
-  const getDueText = (dateString) => {
+  const getDueText = (dateString, dueTimeString = null) => {
     const daysUntilDue = getDaysUntilDue(dateString);
     if (daysUntilDue === null) return { text: '', color: '#666', hours: null };
     
-    const dueDate = new Date(dateString);
-    const hours = dueDate.getHours();
-    const minutes = dueDate.getMinutes();
-    const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    // Parse due_time if provided (from database)
+    let timeStr = null;
+    if (dueTimeString) {
+      try {
+        const dueTimeDate = new Date(dueTimeString);
+        if (!isNaN(dueTimeDate.getTime())) {
+          const hours = dueTimeDate.getHours();
+          const minutes = dueTimeDate.getMinutes();
+          timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+      } catch (e) {
+        console.warn('Error parsing due_time:', e);
+      }
+    }
+    
+    const dueDate = dateString ? new Date(dateString) : new Date();
     
     if (daysUntilDue < 0) {
       return { text: 'Past Due', color: '#dc2626', hours: timeStr };
@@ -158,42 +186,40 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
     setLoading(true);
     try {
       // Determine if we're updating an existing task or creating a new one
-      const isUpdate = task && task.text;
-      let taskIndex = -1;
+      const isUpdate = task && task.id;
       
-      if (isUpdate) {
-        // Fetch todos to find the index
-        try {
-          const todosRes = await apiFetch('/api/todos');
-          if (todosRes.ok) {
-            const todosList = await todosRes.json();
-            taskIndex = todosList.findIndex(t => {
-              const todoDue = t.due ? new Date(t.due).toISOString() : null;
-              const taskDue = task.due ? new Date(task.due).toISOString() : null;
-              return t.text === task.text && 
-                     todoDue === taskDue &&
-                     !t.completed;
-            });
-          }
-        } catch (err) {
-          console.error('Failed to fetch todos:', err);
-        }
+      // Combine due date and time into due_time only if both are provided
+      let dueTimeValue = null;
+      if (dueDate && dueTime) {
+        // Combine date and time into a datetime string (local timezone)
+        const [hours, minutes] = dueTime.split(':').map(Number);
+        const dateTime = new Date(dueDate);
+        dateTime.setHours(hours, minutes, 0, 0);
+        dueTimeValue = dateTime.toISOString();
       }
+      // If only date is provided (no time), don't set due_time - let it be null
       
-      const method = isUpdate && taskIndex >= 0 ? 'PUT' : 'POST';
-      const url = isUpdate && taskIndex >= 0 ? `/api/todos/${taskIndex}` : '/api/todos';
+      const method = isUpdate ? 'PUT' : 'POST';
+      const url = isUpdate ? `/api/todos/${task.id}` : '/api/todos';
+
+      const requestBody = {
+        todo: taskText,
+        due: dueDate || null,
+        category: category || '',
+        goal: goal || null,
+        priority: priority || 'none',
+        status: status || null
+      };
+      
+      // Only include due_time if it's set
+      if (dueTimeValue) {
+        requestBody.due_time = dueTimeValue;
+      }
       
       const res = await apiFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          todo: taskText,
-          due: dueDate || null,
-          category: category || '',
-          goal: goal || null,
-          priority: priority || 'none',
-          status: status || null
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (res.ok) {
@@ -218,24 +244,29 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
       position: 'fixed',
       inset: 0,
       background: 'rgba(0, 0, 0, 0.5)',
+      backdropFilter: 'blur(4px)',
+      WebkitBackdropFilter: 'blur(4px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 2000,
-      padding: isMobile ? '16px' : '24px'
+      padding: isMobile ? '12px' : '16px'
     }}
     onClick={onClose}
     >
       <div
         style={{
-          background: 'white',
-          borderRadius: '16px',
+          background: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '20px',
           width: '100%',
-          maxWidth: mode === 'view' ? '450px' : '500px',
-          padding: mode === 'view' ? (isMobile ? '12px' : '16px') : (isMobile ? '20px' : '24px'),
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+          maxWidth: '360px',
+          padding: mode === 'view' ? (isMobile ? '16px' : '20px') : (isMobile ? '20px' : '24px'),
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(179, 229, 252, 0.2)',
           maxHeight: '90vh',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          boxSizing: 'border-box'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -248,9 +279,10 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
           }}>
             <h2 style={{
               margin: 0,
-              fontSize: isMobile ? '20px' : '24px',
+              fontSize: isMobile ? '18px' : '20px',
               fontWeight: '600',
-              color: '#1f2937'
+              color: '#1f2937',
+              fontFamily: "'Recoleta Alt', serif"
             }}>
               {task ? 'Edit Task' : 'Add New Task'}
             </h2>
@@ -380,7 +412,7 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
                   </span>
                 )}
                 {task.due && (() => {
-                  const dueInfo = getDueText(task.due);
+                  const dueInfo = getDueText(task.due, task.due_time);
                   return dueInfo.text && !task.completed && (
                     <div style={{
                       display: 'flex',
@@ -447,7 +479,7 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
           </div>
         ) : (
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Error Message */}
             {error && (
               <div style={{
@@ -471,38 +503,118 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
                 placeholder="Task title..."
                 style={{
                   width: '100%',
-                  padding: '14px 16px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '16px',
+                  padding: '12px 16px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontFamily: "'IBM Plex Mono', monospace",
                   outline: 'none',
                   boxSizing: 'border-box',
-                  fontWeight: '500'
+                  fontWeight: '400',
+                  background: '#ffffff',
+                  transition: 'all 0.3s ease'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.borderColor = '#B3E5FC';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.borderColor = '#e0e0e0';
+                  e.target.style.boxShadow = 'none';
                 }}
                 autoFocus
               />
             </div>
 
-            {/* Two Column Grid for Goal, Category, Priority, Deadline */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-              gap: '12px'
-            }}>
-              {/* Goal */}
+            {/* Due Date */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                fontFamily: "'Inter Tight', sans-serif",
+                color: '#333333'
+              }}>
+                Due Date
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontFamily: "'Inter Tight', sans-serif",
+                  outline: 'none',
+                  background: '#ffffff',
+                  boxSizing: 'border-box',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#B3E5FC';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e0e0e0';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+
+            {/* Due Time */}
+            {dueDate && (
               <div>
                 <label style={{
                   display: 'block',
                   marginBottom: '8px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#374151'
+                  fontFamily: "'Inter Tight', sans-serif",
+                  color: '#333333'
+                }}>
+                  Due Time
+                </label>
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#B3E5FC';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e0e0e0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Goal */}
+            <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: "'Inter Tight', sans-serif",
+                  color: '#333333'
                 }}>
                   Goal
                 </label>
@@ -512,21 +624,25 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
                     onChange={(e) => setGoal(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '14px',
+                      padding: '14px 40px 14px 16px',
+                      border: '2px solid #e0e0e0',
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      fontFamily: "'Inter Tight', sans-serif",
                       outline: 'none',
-                      background: 'white',
+                      background: '#ffffff',
                       boxSizing: 'border-box',
                       appearance: 'none',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.borderColor = '#B3E5FC';
+                      e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.borderColor = '#e0e0e0';
+                      e.target.style.boxShadow = 'none';
                     }}
                   >
                     <option value="">Select Goal</option>
@@ -538,233 +654,197 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
                   </select>
                   <div style={{
                     position: 'absolute',
-                    right: '12px',
+                    right: '14px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: '#6b7280'
                   }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="6 9 12 15 18 9"/>
                     </svg>
                   </div>
                 </div>
               </div>
 
-              {/* Category */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151'
+            {/* Category */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                fontFamily: "'Inter Tight', sans-serif",
+                color: '#333333'
+              }}>
+                Category<span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '14px 40px 14px 16px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    appearance: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#B3E5FC';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e0e0e0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+                <div style={{
+                  position: 'absolute',
+                  right: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: '#6b7280'
                 }}>
-                  Category<span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      background: 'white',
-                      boxSizing: 'border-box',
-                      appearance: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#3b82f6';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#e5e7eb';
-                    }}
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                    color: '#6b7280'
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </div>
               </div>
+            </div>
 
-              {/* Priority */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151'
+            {/* Priority */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                fontFamily: "'Inter Tight', sans-serif",
+                color: '#333333'
+              }}>
+                Priority
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 40px 14px 16px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    appearance: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#B3E5FC';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e0e0e0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  {priorities.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+                <div style={{
+                  position: 'absolute',
+                  right: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: '#6b7280'
                 }}>
-                  Priority
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      background: 'white',
-                      boxSizing: 'border-box',
-                      appearance: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#3b82f6';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#e5e7eb';
-                    }}
-                  >
-                    {priorities.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                    color: '#6b7280'
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </div>
               </div>
+            </div>
 
-              {/* Status */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151'
+            {/* Status */}
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                fontFamily: "'Inter Tight', sans-serif",
+                color: '#333333'
+              }}>
+                Status
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={status || ''}
+                  onChange={(e) => setStatus(e.target.value || null)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 40px 14px 16px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    appearance: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#B3E5FC';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(179, 229, 252, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e0e0e0';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  {statusOptions.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <div style={{
+                  position: 'absolute',
+                  right: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: '#6b7280'
                 }}>
-                  Status
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={status || ''}
-                    onChange={(e) => setStatus(e.target.value || null)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      background: 'white',
-                      boxSizing: 'border-box',
-                      appearance: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#3b82f6';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#e5e7eb';
-                    }}
-                  >
-                    {statusOptions.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                    color: '#6b7280'
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Deadline */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151'
-                }}>
-                  Deadline
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="datetime-local"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 36px 12px 16px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#3b82f6';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#e5e7eb';
-                    }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                    color: '#6b7280'
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/>
-                      <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </div>
               </div>
             </div>
@@ -780,21 +860,26 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
                 type="button"
                 onClick={onClose}
                 style={{
-                  padding: '12px 24px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: '16px',
+                  padding: '10px 20px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  color: '#333333',
+                  fontSize: '14px',
+                  fontFamily: "'Inter Tight', sans-serif",
                   fontWeight: '500',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.3s ease'
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.background = '#f9fafb';
+                  e.target.style.background = 'rgba(249, 250, 251, 0.95)';
+                  e.target.style.borderColor = '#B3E5FC';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.background = 'white';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                  e.target.style.borderColor = '#e0e0e0';
                 }}
               >
                 Cancel
@@ -803,24 +888,39 @@ const TaskModal = ({ task = null, onClose, onSave, mode: initialMode = 'view' })
                 type="submit"
                 disabled={loading || !taskText.trim() || !category}
                 style={{
-                  padding: '12px 24px',
+                  padding: '10px 24px',
                   border: 'none',
-                  borderRadius: '8px',
-                  background: loading || !taskText.trim() || !category ? '#d1d5db' : '#374151',
-                  color: 'white',
-                  fontSize: '16px',
+                  borderRadius: '12px',
+                  background: loading || !taskText.trim() || !category 
+                    ? 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)' 
+                    : 'linear-gradient(135deg, #B3E5FC 0%, #81D4FA 100%)',
+                  color: loading || !taskText.trim() || !category ? '#6b7280' : '#000000',
+                  fontSize: '14px',
+                  fontFamily: "'Inter Tight', sans-serif",
                   fontWeight: '500',
                   cursor: loading || !taskText.trim() || !category ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.3s ease',
+                  boxShadow: loading || !taskText.trim() || !category 
+                    ? 'none' 
+                    : '0 4px 12px rgba(179, 229, 252, 0.3)'
                 }}
                 onMouseOver={(e) => {
                   if (!loading && taskText.trim() && category) {
-                    e.target.style.background = '#1f2937';
+                    e.target.style.background = 'linear-gradient(135deg, #81D4FA 0%, #4FC3F7 100%)';
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 16px rgba(179, 229, 252, 0.4)';
                   }
                 }}
                 onMouseOut={(e) => {
                   if (!loading && taskText.trim() && category) {
-                    e.target.style.background = '#374151';
+                    e.target.style.background = 'linear-gradient(135deg, #B3E5FC 0%, #81D4FA 100%)';
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(179, 229, 252, 0.3)';
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (!loading && taskText.trim() && category) {
+                    e.target.style.transform = 'translateY(0)';
                   }
                 }}
               >

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch, API_BASE } from '../../api';
+import { useUser } from '../../contexts/UserContext';
 import ProfileEditModal from '../modals/ProfileEditModal';
 import SharedCalendarModal from '../modals/SharedCalendarModal';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
+  const { logout } = useUser();
   const [user, setUser] = useState({ name: 'Jing Huang', role: 'Student', chronotype: 'early' });
   const [interests, setInterests] = useState({
     'Mind & Learning': ['Reading', 'Learning Languages', 'Podcasts'],
@@ -286,6 +290,21 @@ const ProfilePage = () => {
     }));
   };
 
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      try {
+        await logout();
+        // logout() already redirects to home, but we can navigate as well
+        navigate('/');
+      } catch (error) {
+        console.error('Logout error:', error);
+        setNotificationMessage('Failed to log out. Please try again.');
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      }
+    }
+  };
+
   const getInterestIcon = (interest) => {
     const icons = {
       'Reading': (
@@ -358,7 +377,7 @@ const ProfilePage = () => {
     <div style={{
       width: '100%',
       maxWidth: '100%',
-      background: '#f9fafb',
+      background: 'transparent',
       minHeight: 'calc(100vh - 80px)',
       paddingBottom: '120px',
       WebkitOverflowScrolling: 'touch'
@@ -366,8 +385,10 @@ const ProfilePage = () => {
       {/* Header */}
       <div style={{
         padding: isMobile ? '16px' : '20px',
-        background: 'white',
-        borderBottom: '1px solid #f0f0f0'
+        background: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(179, 229, 252, 0.2)'
       }}>
       </div>
 
@@ -379,11 +400,14 @@ const ProfilePage = () => {
         }}>
         {/* Profile Card */}
         <div style={{
-          background: 'white',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           borderRadius: '16px',
           padding: isMobile ? '20px' : '24px',
           marginBottom: '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(179, 229, 252, 0.2)',
           position: 'relative'
         }}>
           <div style={{
@@ -999,6 +1023,58 @@ const ProfilePage = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Account Actions Section */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: isMobile ? '20px' : '24px',
+          marginBottom: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{
+            margin: '0 0 20px 0',
+            fontSize: isMobile ? '18px' : '20px',
+            fontWeight: '600',
+            color: '#1f2937'
+          }}>
+            Account
+          </h3>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid #dc2626',
+              background: 'white',
+              color: '#dc2626',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#fef2f2';
+              e.target.style.borderColor = '#b91c1c';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'white';
+              e.target.style.borderColor = '#dc2626';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Log Out
+          </button>
         </div>
 
         {/* Interests Section */}

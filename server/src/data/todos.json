@@ -428,5 +428,15 @@
     "goal": null,
     "status": null,
     "priority": "none"
+  },
+  {
+    "text": "pick up the key",
+    "completed": false,
+    "due": "2025-11-29",
+    "type": "",
+    "category": "personal",
+    "goal": null,
+    "status": null,
+    "priority": "none"
   }
 ]

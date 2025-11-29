@@ -201,27 +201,44 @@ const CalendarPage = () => {
     try {
       setLoading(true);
       
-      // Load calendar events
-      // Load events - if Google is authenticated, sync and get all events from there
-      // Otherwise, load from local calendar
-      if (googleAuth.authorized) {
-        try {
-          // This will sync Google events into events.json and return all events
-          const googleRes = await apiFetch('/api/google/events');
-          const googleData = await googleRes.json();
-          setEvents(googleData.events || []);
-        } catch (error) {
-          console.error('Failed to load Google Calendar events:', error);
-          // Fallback to local events if Google sync fails
-      const evRes = await apiFetch('/api/calendar/events');
-      const evData = await evRes.json();
-        setEvents(evData.events || []);
+      // First verify user is authenticated
+      let isAuthenticated = false;
+      try {
+        const authRes = await apiFetch('/api/auth/me');
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          isAuthenticated = !!authData.user;
+          if (!isAuthenticated) {
+            console.warn('⚠️  User not authenticated, calendar events may not load from database');
+          }
         }
-      } else {
-        // Load local events only
+      } catch (authError) {
+        console.error('Failed to check authentication:', authError);
+      }
+      
+      // Load calendar events from database (includes Google events if synced)
+      // The backend will return events from database if user is authenticated,
+      // or fallback to file-based calendar if not authenticated
+      try {
         const evRes = await apiFetch('/api/calendar/events');
+        if (!evRes.ok) {
+          throw new Error(`Failed to load events: ${evRes.status}`);
+        }
         const evData = await evRes.json();
-        setEvents(evData.events || []);
+        const loadedEvents = evData.events || [];
+        console.log(`📅 Loaded ${loadedEvents.length} events from ${isAuthenticated ? 'database' : 'file-based calendar'}`);
+        setEvents(loadedEvents);
+        
+        // If Google is connected, optionally sync fresh events (but don't block on it)
+        if (googleAuth.authorized) {
+          // Sync Google events in background (non-blocking)
+          apiFetch('/api/google/events').catch(err => {
+            console.log('Background Google sync failed (non-critical):', err);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load calendar events:', error);
+        setEvents([]);
       }
         
         // Load categories
@@ -602,9 +619,13 @@ const CalendarPage = () => {
             : `${getGreeting()}, ${userName} — here's your ${viewMode === 'week' ? 'week' : 'day'}.`
           }
         </h1>
+        </div>
 
-          {/* Daily Status Badge */}
-          {dailyStatus && (
+        {/* Daily Status Badge - Moved below title */}
+        {dailyStatus && (
+          <div 
+            className="status-badge-container"
+          >
             <div 
               className="status-badge"
               style={{
@@ -620,9 +641,8 @@ const CalendarPage = () => {
                 {dailyStatus.status === 'default' ? 'No Events' : dailyStatus.status.charAt(0).toUpperCase() + dailyStatus.status.slice(1)}
               </span>
             </div>
-          )}
-
-        </div>
+          </div>
+        )}
 
         {/* Daily Status Message */}
         {dailyStatus && dailyStatus.message && showStatusMessage && (
@@ -885,8 +905,8 @@ const CalendarPage = () => {
               className="week-day-headers"
               style={expandedDayIndex !== null ? {
                 gridTemplateColumns: isMobile 
-                  ? `28px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
-                  : `60px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+                  ? `24px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+                  : `50px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
               } : undefined}
             >
               <div></div>
@@ -900,8 +920,8 @@ const CalendarPage = () => {
                     <div className="week-day-name">
                       {dayName}
                     </div>
-                    <div className={`week-day-number ${isToday ? 'week-day-number-today' : ''}`}>
-                      {dayNumber}
+                    <div className={`week-day-indicator ${isToday ? 'week-day-indicator-today' : ''}`}>
+                      <span className="week-day-number">{dayNumber}</span>
                     </div>
                   </div>
                 );
@@ -913,8 +933,8 @@ const CalendarPage = () => {
               className="week-calendar-grid"
               style={expandedDayIndex !== null ? {
                 gridTemplateColumns: isMobile
-                  ? `28px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
-                  : `60px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+                  ? `24px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
+                  : `50px ${getWeekDays().map((_, idx) => idx === expandedDayIndex ? '4fr' : '0.5fr').join(' ')}`
               } : undefined}
             >
               {/* Time Labels */}
@@ -963,7 +983,7 @@ const CalendarPage = () => {
                       <div
                         className="week-current-time-indicator"
                         style={{
-                          top: `${isMobile ? getCurrentTimeTop() * (45/60) : getCurrentTimeTop()}px`
+                          top: `${isMobile ? getCurrentTimeTop() * (40/60) : getCurrentTimeTop() * (50/60)}px`
                         }}
                       >
                         <div className="week-current-time-dot" />
@@ -972,8 +992,8 @@ const CalendarPage = () => {
 
                     {/* Events */}
                     {dayEvents.map((item, eventIndex) => {
-                      const top = isMobile ? getEventTop(item.startTime) * (45/60) : getEventTop(item.startTime);
-                      const height = isMobile ? getEventHeight(item.startTime, item.endTime) * (45/60) : getEventHeight(item.startTime, item.endTime);
+                      const top = isMobile ? getEventTop(item.startTime) * (40/60) : getEventTop(item.startTime) * (50/60);
+                      const height = isMobile ? getEventHeight(item.startTime, item.endTime) * (40/60) : getEventHeight(item.startTime, item.endTime) * (50/60);
                       const isTask = item.type === 'task';
                       const eventText = item.summary || item.text || '';
                       

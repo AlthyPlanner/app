@@ -11,8 +11,8 @@ router.post('/', goalController.createGoal);
 // Update milestone status (must come before /:id routes)
 router.patch('/:id/milestones/:milestoneId/toggle', goalController.toggleMilestone);
 
-// Get goal by ID
-router.get('/:id', goalController.getGoalById);
+// Get a single goal by ID
+router.get('/:id', goalController.getGoal);
 
 // Update a goal
 router.put('/:id', goalController.updateGoal);
@@ -21,4 +21,3 @@ router.put('/:id', goalController.updateGoal);
 router.delete('/:id', goalController.deleteGoal);
 
 module.exports = router;
-
