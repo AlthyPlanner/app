@@ -619,9 +619,13 @@ const CalendarPage = () => {
             : `${getGreeting()}, ${userName} — here's your ${viewMode === 'week' ? 'week' : 'day'}.`
           }
         </h1>
+        </div>
 
-          {/* Daily Status Badge */}
-          {dailyStatus && (
+        {/* Daily Status Badge - Moved below title */}
+        {dailyStatus && (
+          <div 
+            className="status-badge-container"
+          >
             <div 
               className="status-badge"
               style={{
@@ -637,9 +641,8 @@ const CalendarPage = () => {
                 {dailyStatus.status === 'default' ? 'No Events' : dailyStatus.status.charAt(0).toUpperCase() + dailyStatus.status.slice(1)}
               </span>
             </div>
-          )}
-
-        </div>
+          </div>
+        )}
 
         {/* Daily Status Message */}
         {dailyStatus && dailyStatus.message && showStatusMessage && (
@@ -917,8 +920,8 @@ const CalendarPage = () => {
                     <div className="week-day-name">
                       {dayName}
                     </div>
-                    <div className={`week-day-number ${isToday ? 'week-day-number-today' : ''}`}>
-                      {dayNumber}
+                    <div className={`week-day-indicator ${isToday ? 'week-day-indicator-today' : ''}`}>
+                      <span className="week-day-number">{dayNumber}</span>
                     </div>
                   </div>
                 );

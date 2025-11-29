@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { UserProvider } from './contexts/UserContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
@@ -13,10 +13,53 @@ import GoalsPage from './components/pages/GoalsPage';
 import ProfilePage from './components/pages/ProfilePage';
 import AlthyPage from './components/pages/AlthyPage';
 
-const App = () => {
+const AppContent = () => {
+  const location = useLocation();
+
+  // Disable outermost scrolling only when on /app routes
+  useEffect(() => {
+    const isAppRoute = location.pathname.startsWith('/app');
+    
+    if (isAppRoute) {
+      // Disable scrolling on html/body when in app
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.position = 'fixed';
+      document.documentElement.style.width = '100%';
+      document.documentElement.style.height = '100%';
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+      document.body.style.touchAction = 'none';
+    } else {
+      // Enable scrolling on other routes
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.position = '';
+      document.documentElement.style.width = '';
+      document.documentElement.style.height = '';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.touchAction = '';
+    }
+
+    // Cleanup function to restore scrolling when component unmounts
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.position = '';
+      document.documentElement.style.width = '';
+      document.documentElement.style.height = '';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.touchAction = '';
+    };
+  }, [location.pathname]);
+
   return (
-    <UserProvider>
-      <Routes>
+    <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
@@ -36,7 +79,14 @@ const App = () => {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="althy" element={<AlthyPage />} />
         </Route>
-      </Routes>
+    </Routes>
+  );
+};
+
+const App = () => {
+  return (
+    <UserProvider>
+      <AppContent />
     </UserProvider>
   );
 };
