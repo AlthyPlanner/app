@@ -1,4 +1,5 @@
- function normalizeDay(day) {
+function normalizeDay(day) {
+  // Make validation more forgiving
   const cleaned = day.trim().toLowerCase().replace(/[^a-z]/g, "");
 
   const map = {
@@ -23,17 +24,6 @@
   }
 
   return map[cleaned];
-}
-
-
-  const key = day.trim().toLowerCase();
-
-  // FIXED: correct validation
-  if (!(key in days)) {
-    throw new Error("Invalid day: " + day);
-  }
-
-  return days[key];
 }
 
 function normalizeTime(time) {
