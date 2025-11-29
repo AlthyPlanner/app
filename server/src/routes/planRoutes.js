@@ -1,5 +1,7 @@
+// src/services/planPostprocessor.js
+
 function normalizeDay(day) {
-  // Make validation more forgiving
+  // Clean and normalize
   const cleaned = day.trim().toLowerCase().replace(/[^a-z]/g, "");
 
   const map = {
@@ -29,21 +31,24 @@ function normalizeDay(day) {
 function normalizeTime(time) {
   let t = time.toLowerCase().replace(/\s+/g, "");
 
+  // Convert "7am" → "07:00"
   if (t.includes("am") || t.includes("pm")) {
     const dt = new Date("1970-01-01 " + time);
-    return dt.toISOString().substr(11, 5);
+    return dt.toISOString().substring(11, 16);
   }
 
+  // Already in HH:mm
   if (/^\d{2}:\d{2}$/.test(t)) return t;
 
   throw new Error("Invalid time: " + time);
 }
 
 function normalizeDate(dateString) {
-  if (isNaN(Date.parse(dateString))) {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) {
     throw new Error("Invalid date: " + dateString);
   }
-  return dateString;
+  return d.toISOString(); // required ISO-8601 format
 }
 
 function postprocessPlan(raw) {
@@ -73,3 +78,4 @@ function postprocessPlan(raw) {
 }
 
 module.exports = { postprocessPlan };
+
