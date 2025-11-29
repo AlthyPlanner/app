@@ -87,6 +87,45 @@ const chatController = {
       // Step 2: Generate AI response
       let aiResponse = 'I apologize, but I encountered an error processing your request.';
       try {
+        // Calculate current date information for the AI
+        const now = new Date();
+        const todayYear = now.getFullYear();
+        const todayMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const todayDay = String(now.getDate()).padStart(2, '0');
+        const today = `${todayYear}-${todayMonth}-${todayDay}`;
+        
+        // Calculate yesterday
+        const yesterdayDate = new Date(now);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayYear = yesterdayDate.getFullYear();
+        const yesterdayMonth = String(yesterdayDate.getMonth() + 1).padStart(2, '0');
+        const yesterdayDay = String(yesterdayDate.getDate()).padStart(2, '0');
+        const yesterday = `${yesterdayYear}-${yesterdayMonth}-${yesterdayDay}`;
+        
+        // Calculate tomorrow
+        const tomorrowDate = new Date(now);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const tomorrowYear = tomorrowDate.getFullYear();
+        const tomorrowMonth = String(tomorrowDate.getMonth() + 1).padStart(2, '0');
+        const tomorrowDay = String(tomorrowDate.getDate()).padStart(2, '0');
+        const tomorrow = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`;
+        
+        // Format dates for display
+        const todayDisplay = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const yesterdayDisplay = yesterdayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const tomorrowDisplay = tomorrowDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // Calculate date helper function context (for AI to understand how to calculate relative dates)
+        const currentDayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayDayName = dayNames[currentDayOfWeek];
+        
+        // Log date information for debugging
+        console.log('Date context for AI:');
+        console.log('  Yesterday:', yesterday, '(' + yesterdayDisplay + ')');
+        console.log('  Today:', today, '(' + todayDisplay + ')');
+        console.log('  Tomorrow:', tomorrow, '(' + tomorrowDisplay + ')');
+        
         // Build context summary with defensive checks
         let contextSummary = '';
         try {
@@ -139,6 +178,35 @@ const chatController = {
 
         // Build system prompt with context
         const systemPrompt = `You are Althy, an AI personal planning assistant. Your job is to help the user manage their time, tasks, plans, and goals in a clear and structured way.
+
+⚠️ CRITICAL DATE INFORMATION - USE THESE DATES AND CALCULATE RELATIVE DATES FROM TODAY ⚠️
+
+REFERENCE DATES (use these as anchors):
+- YESTERDAY WAS: ${yesterdayDisplay} (${yesterday})
+- TODAY IS: ${todayDisplay} (${today})
+- TOMORROW IS: ${tomorrowDisplay} (${tomorrow})
+- CURRENT TIME: ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}
+- TODAY IS: ${todayDayName}
+
+DATE CALCULATION RULES:
+1. For exact dates mentioned above (yesterday, today, tomorrow): Use the EXACT dates provided
+2. For relative dates (e.g., "2 days ago", "last Monday", "3 days from now"): Calculate from TODAY (${today})
+3. When calculating relative dates:
+   - Count days from today: "2 days ago" means 2 days before ${today}
+   - "last [day name]" = The most recent [day name] that occurred before today
+   - "next [day name]" = The next [day name] that will occur after today
+   - Always present dates in readable format: "Weekday, Month Day, Year" (e.g., "Monday, December 23, 2024")
+4. Example: Today is ${todayDisplay}. "2 days ago" would be ${new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+
+EXAMPLES OF DATE RESPONSES:
+- User: "what is yesterday's date?" → You: "Yesterday was ${yesterdayDisplay} (${yesterday})."
+- User: "what is today's date?" → You: "Today is ${todayDisplay} (${today})."
+- User: "what is tomorrow's date?" → You: "Tomorrow is ${tomorrowDisplay} (${tomorrow})."
+- User: "what date was 2 days ago?" → You calculate: 2 days before ${today}, which is [calculated date]
+- User: "what date was last Monday?" → You calculate: The most recent Monday before ${today}, which is [calculated date]
+- User: "what date is 3 days from now?" → You calculate: 3 days after ${today}, which is [calculated date]
+
+IMPORTANT: Always calculate relative dates from TODAY (${today}). Show dates in readable format like "Monday, December 23, 2024".
 
 Core responsibilities:
 
@@ -199,6 +267,25 @@ Your goal is to help the user stay productive, healthy, and balanced with minima
         } catch (historyErr) {
           console.error('Error processing chat history:', historyErr);
           // Continue without history if there's an error
+        }
+
+        // Check if user is asking about dates and add explicit date reminder
+        const lowerPrompt = prompt.toLowerCase();
+        const isDateQuestion = lowerPrompt.includes('tomorrow') || 
+                              lowerPrompt.includes('today') || 
+                              lowerPrompt.includes('yesterday') ||
+                              lowerPrompt.includes('date') ||
+                              lowerPrompt.includes('what day') ||
+                              lowerPrompt.includes('days ago') ||
+                              lowerPrompt.includes('last ') ||
+                              lowerPrompt.includes('ago');
+        
+        if (isDateQuestion) {
+          // Add an assistant message with date reminder right before user's question
+          messages.push({
+            role: 'assistant',
+            content: `Remember: Yesterday was ${yesterdayDisplay} (${yesterday}). Today is ${todayDisplay} (${today}). Tomorrow is ${tomorrowDisplay} (${tomorrow}). When answering date questions, use these exact dates for yesterday/today/tomorrow, or calculate relative dates from today.`
+          });
         }
 
         // Add current user message

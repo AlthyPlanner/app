@@ -172,6 +172,33 @@
     "category": "work"
   },
   {
+    "id": "ekpf7xk8",
+    "summary": "Monday - Friday",
+    "start": "2025-11-25T09:00:00.000Z",
+    "end": "2025-11-25T10:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "work"
+  },
+  {
+    "id": "dvehnkh9",
+    "summary": "team review meeting",
+    "start": "2025-11-24T14:00:00.000Z",
+    "end": "2025-11-24T15:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "work"
+  },
+  {
+    "id": "aoyeu9gw",
+    "summary": "meeting",
+    "start": "2025-11-24T14:00:00.000Z",
+    "end": "2025-11-24T15:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "work"
+  },
+  {
     "id": "mwgw5i58",
     "googleId": "19afc61qt716s22hf2kk09epr3_20251125T133000Z",
     "summary": "Work",
@@ -180,6 +207,24 @@
     "description": "",
     "location": "",
     "source": "google",
+    "category": "work"
+  },
+  {
+    "id": "yjzl37fw",
+    "summary": "Event",
+    "start": "2025-11-25T09:00:00.000Z",
+    "end": "2025-11-25T10:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "work"
+  },
+  {
+    "id": "1e17h84f",
+    "summary": "No specific event title provided",
+    "start": "2025-11-25T14:00:00.000Z",
+    "end": "2025-11-25T15:00:00.000Z",
+    "description": "",
+    "location": "",
     "category": "work"
   },
   {
@@ -205,6 +250,24 @@
     "category": "work"
   },
   {
+    "id": "cs0blaol",
+    "summary": "work meeting",
+    "start": "2025-11-26T14:00:00.000Z",
+    "end": "2025-11-26T15:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "work"
+  },
+  {
+    "id": "hbpnh57n",
+    "summary": "Tomorrow's Date",
+    "start": "2025-11-26T14:00:00.000Z",
+    "end": "2025-11-26T15:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "personal"
+  },
+  {
     "id": "aknbsnyu",
     "googleId": "1go4gpqtjadq4uh106tsfvllkq",
     "summary": "Team meeting",
@@ -213,6 +276,24 @@
     "description": "",
     "location": "",
     "source": "google",
+    "category": "work"
+  },
+  {
+    "id": "cs9gwmkv",
+    "summary": "meeting",
+    "start": "2025-11-26T19:30:00.000Z",
+    "end": "2025-11-26T21:00:00.000Z",
+    "description": "",
+    "location": "",
+    "category": "work"
+  },
+  {
+    "id": "04y4ue7d",
+    "summary": "event",
+    "start": "2025-11-26T00:00:00.000Z",
+    "end": "2025-11-26T02:00:00.000Z",
+    "description": "",
+    "location": "",
     "category": "work"
   },
   {

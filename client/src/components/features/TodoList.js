@@ -136,9 +136,25 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     }
   };
 
+  // Helper function to parse dates consistently - handles YYYY-MM-DD format as local timezone
+  const parseDate = (dateString) => {
+    if (!dateString) return null;
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Date-only string (YYYY-MM-DD) - parse as local timezone
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    } else {
+      // ISO string or other format - parse normally
+      return new Date(dateString);
+    }
+  };
+
   const getDaysUntilDue = (dateString) => {
     if (!dateString) return null;
-    const dueDate = new Date(dateString);
+    
+    const dueDate = parseDate(dateString);
+    if (!dueDate) return null;
+    
     const today = new Date();
     dueDate.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
@@ -150,21 +166,34 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     const daysUntilDue = getDaysUntilDue(dateString);
     if (daysUntilDue === null) return { text: '', color: '#666', hours: null };
     
-    const dueDate = new Date(dateString);
+    // Parse date string - handle YYYY-MM-DD format as local timezone (not UTC)
+    let dueDate;
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Date-only string (YYYY-MM-DD) - parse as local timezone
+      const [year, month, day] = dateString.split('-').map(Number);
+      dueDate = new Date(year, month - 1, day);
+    } else {
+      // ISO string or other format - parse normally
+      dueDate = new Date(dateString);
+    }
+    
+    // Tasks typically don't have times, so don't show time unless it's explicitly set
+    const hasTime = dueDate.getHours() !== 0 || dueDate.getMinutes() !== 0 || 
+                   (typeof dateString === 'string' && dateString.includes('T'));
     const hours = dueDate.getHours();
     const minutes = dueDate.getMinutes();
-    const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const timeStr = hasTime ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : null;
     
     let text, color;
     if (daysUntilDue < 0) {
-      text = `Due ${Math.abs(daysUntilDue)} days ago`;
+      text = `Due ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? '' : 's'} ago`;
       color = '#dc2626';
     } else if (daysUntilDue === 0) {
       text = `Due Today`;
       color = '#dc2626';
     } else if (daysUntilDue === 1) {
-      text = `Due in 2 hours`;
-      color = '#dc2626';
+      text = `Due Tomorrow`;
+      color = '#f97316';
     } else if (daysUntilDue <= 3) {
       text = `Due in ${daysUntilDue} days`;
       color = '#f97316';
@@ -173,7 +202,7 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
       color = '#6b7280';
     }
     
-    return { text, color, hours: daysUntilDue === 0 ? timeStr : null };
+    return { text, color, hours: (daysUntilDue === 0 && hasTime) ? timeStr : null };
   };
 
   const getPriorityColor = (daysUntilDue) => {
@@ -250,7 +279,15 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
         if (!a.due && !b.due) return 0;
         if (!a.due) return 1; // Tasks without due dates go to end
         if (!b.due) return -1;
-        return new Date(a.due) - new Date(b.due);
+        
+        // Use parseDate helper to correctly handle date-only strings
+        const dateA = parseDate(a.due);
+        const dateB = parseDate(b.due);
+        if (!dateA || !dateB) {
+          if (!dateA && !dateB) return 0;
+          return dateA ? -1 : 1;
+        }
+        return dateA.getTime() - dateB.getTime();
       });
     } else if (sortBy === 'priority') {
       sorted.sort((a, b) => {
@@ -281,7 +318,15 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
           if (!a.due && !b.due) return 0;
           if (!a.due) return 1;
           if (!b.due) return -1;
-          return new Date(a.due) - new Date(b.due);
+          
+          // Use parseDate helper to correctly handle date-only strings
+          const dateA = parseDate(a.due);
+          const dateB = parseDate(b.due);
+          if (!dateA || !dateB) {
+            if (!dateA && !dateB) return 0;
+            return dateA ? -1 : 1;
+          }
+          return dateA.getTime() - dateB.getTime();
         }
         return catA.localeCompare(catB);
       });
@@ -310,7 +355,17 @@ const TodoList = ({ viewMode = 'all', dateFilter = 'today' }) => {
     
     return todoList.filter(todo => {
       if (!todo.due) return false;
-      const dueDate = new Date(todo.due);
+      
+      // Parse date string - handle YYYY-MM-DD format as local timezone (not UTC)
+      let dueDate;
+      if (typeof todo.due === 'string' && todo.due.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Date-only string (YYYY-MM-DD) - parse as local timezone
+        const [year, month, day] = todo.due.split('-').map(Number);
+        dueDate = new Date(year, month - 1, day);
+      } else {
+        // ISO string or other format - parse normally
+        dueDate = new Date(todo.due);
+      }
       dueDate.setHours(0, 0, 0, 0);
       
       if (effectiveDateFilter === 'today') {

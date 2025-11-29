@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api';
 import GoalModal from '../modals/GoalModal';
 import './GoalsPage.css';
 
@@ -12,6 +13,8 @@ const GoalsPage = () => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingGoal, setEditingGoal] = useState(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -20,6 +23,46 @@ const GoalsPage = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Load goals from API on mount and when page becomes visible
+  useEffect(() => {
+    loadGoals();
+    
+    // Reload goals when page becomes visible (user navigates back)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadGoals();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also reload on focus (when user switches back to tab)
+    window.addEventListener('focus', loadGoals);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', loadGoals);
+    };
+  }, []);
+
+  const loadGoals = async () => {
+    try {
+      setLoading(true);
+      const res = await apiFetch('/api/goals');
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(data.goals || []);
+      } else {
+        console.error('Failed to load goals');
+        setGoals([]);
+      }
+    } catch (err) {
+      console.error('Error loading goals:', err);
+      setGoals([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -37,9 +80,20 @@ const GoalsPage = () => {
     }
   }, [openMenuId]);
 
-  const handleMarkComplete = (goalId) => {
-    // In a real app, this would update the goal's progress to 100%
-    console.log('Mark as complete:', goalId);
+  const handleMarkComplete = async (goalId) => {
+    try {
+      const goal = goals.find(g => g.id === goalId);
+      if (goal) {
+        await apiFetch(`/api/goals/${goalId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...goal, progress: 100 })
+        });
+        await loadGoals();
+      }
+    } catch (err) {
+      console.error('Failed to mark goal as complete:', err);
+    }
     setOpenMenuId(null);
   };
 
@@ -49,92 +103,69 @@ const GoalsPage = () => {
     setShowGoalModal(true);
   };
 
-  const handleDelete = (goalId) => {
+  const handleDelete = async (goalId) => {
     if (window.confirm('Are you sure you want to delete this goal?')) {
-      // In a real app, this would delete the goal
-      console.log('Delete goal:', goalId);
+      try {
+        const res = await apiFetch(`/api/goals/${goalId}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          await loadGoals();
+        }
+      } catch (err) {
+        console.error('Failed to delete goal:', err);
+      }
       setOpenMenuId(null);
     }
   };
 
-  // Sample data matching the design
-  const goals = [
-    {
-      id: 1,
-      title: 'Learn Spanish',
-      category: 'Study',
-      categoryColor: '#10b981',
-      target: 'Conversational fluency',
-      deadline: 'Dec 2025',
-      progress: 45,
-      milestones: [
-        { id: 1, text: 'Complete beginner course', completed: true },
-        { id: 2, text: 'Practice 30 min daily', completed: true },
-        { id: 3, text: 'Hold 5-min conversation', completed: false }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Read 24 Books',
-      category: 'Leisure',
-      categoryColor: '#9333ea',
-      target: '24 books/year',
-      deadline: 'Dec 2025',
-      progress: 33,
-      milestones: [
-        { id: 1, text: 'Read 8 books', completed: true },
-        { id: 2, text: 'Read 16 books', completed: false },
-        { id: 3, text: 'Read 24 books', completed: false }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Run Marathon',
-      category: 'Fitness',
-      categoryColor: '#ef6c00',
-      target: 'Complete 26.2 miles',
-      deadline: 'Jun 2025',
-      progress: 20,
-      milestones: [
-        { id: 1, text: 'Run 5K', completed: true },
-        { id: 2, text: 'Run 10K', completed: false },
-        { id: 3, text: 'Run half marathon', completed: false }
-      ]
-    },
-    {
-      id: 4,
-      title: 'Learn Piano',
-      category: 'Leisure',
-      categoryColor: '#9333ea',
-      target: 'Play 5 songs',
-      deadline: 'Mar 2025',
-      progress: 60,
-      milestones: [
-        { id: 1, text: 'Learn basic chords', completed: true },
-        { id: 2, text: 'Play first song', completed: true },
-        { id: 3, text: 'Master 5 songs', completed: false }
-      ]
-    },
-    {
-      id: 5,
-      title: 'Build Mobile App',
-      category: 'Work',
-      categoryColor: '#3b82f6',
-      target: 'Launch on App Store',
-      deadline: 'Aug 2025',
-      progress: 15,
-      milestones: [
-        { id: 1, text: 'Design mockups', completed: true },
-        { id: 2, text: 'Build MVP', completed: false },
-        { id: 3, text: 'Submit for review', completed: false }
-      ]
-    }
-  ];
+  // Category color mapping
+  const getCategoryColor = (category) => {
+    const colors = {
+      'work': '#3b82f6',
+      'study': '#10b981',
+      'personal': '#ec4899',
+      'leisure': '#9333ea',
+      'fitness': '#ef6c00',
+      'health': '#10b981',
+      'travel': '#f59e0b',
+      'rest': '#6b7280'
+    };
+    return colors[category?.toLowerCase()] || '#6b7280';
+  };
 
-  const totalGoals = goals.length;
-  const totalHabits = 3; // Sample data
+  // Filter and sort goals
+  const filteredGoals = goals.filter(goal => {
+    if (activeTab === 'goals') {
+      return goal.type === 'goal';
+    } else {
+      return goal.type === 'habit';
+    }
+  }).map(goal => ({
+    ...goal,
+    categoryColor: getCategoryColor(goal.category)
+  }));
+
+  // Sort goals
+  const sortedGoals = [...filteredGoals].sort((a, b) => {
+    if (sortBy === 'deadline') {
+      // Sort by deadline (if available)
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return a.deadline.localeCompare(b.deadline);
+    } else if (sortBy === 'progress') {
+      // Sort by progress (higher first)
+      return b.progress - a.progress;
+    }
+    return 0;
+  });
+
+  // Calculate stats
+  const totalGoals = goals.filter(g => g.type === 'goal').length;
+  const totalHabits = goals.filter(g => g.type === 'habit').length;
   const completedGoals = goals.filter(g => g.progress === 100).length;
-  const totalMilestones = goals.reduce((sum, g) => sum + g.milestones.length, 0);
+  const totalMilestones = goals.reduce((sum, g) => sum + (g.milestones?.length || 0), 0);
 
   return (
     <div className="goals-page">
@@ -269,7 +300,15 @@ const GoalsPage = () => {
 
       {/* Goals List */}
       <div className={`goals-list ${!isMobile ? 'goals-list-desktop' : ''}`}>
-        {activeTab === 'goals' && goals.map((goal) => (
+        {loading ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            Loading goals...
+          </div>
+        ) : sortedGoals.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            {activeTab === 'goals' ? 'No goals yet. Create one to get started!' : 'No habits yet. Create one to get started!'}
+          </div>
+        ) : sortedGoals.map((goal) => (
           <div
             key={goal.id}
             className="goal-card"
@@ -343,31 +382,39 @@ const GoalsPage = () => {
             </div>
 
             {/* Category Tag */}
-            <div 
-              className="goal-category-tag"
-              style={{
-              background: `${goal.categoryColor}20`,
-                color: goal.categoryColor
-              }}
-            >
-              {goal.category}
-            </div>
+            {goal.category && (
+              <div 
+                className="goal-category-tag"
+                style={{
+                  background: `${goal.categoryColor}20`,
+                  color: goal.categoryColor
+                }}
+              >
+                {goal.category.charAt(0).toUpperCase() + goal.category.slice(1)}
+              </div>
+            )}
 
             {/* Target and Deadline */}
-            <div className="goal-target-section">
-              <div className="goal-target">
-                Target: {goal.target}
+            {(goal.target || goal.deadline) && (
+              <div className="goal-target-section">
+                {goal.target && (
+                  <div className="goal-target">
+                    Target: {goal.target}
+                  </div>
+                )}
+                {goal.deadline && (
+                  <div className="goal-deadline">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    {goal.deadline}
+                  </div>
+                )}
               </div>
-              <div className="goal-deadline">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                {goal.deadline}
-              </div>
-            </div>
+            )}
 
             {/* Progress Bar */}
             <div className="goal-progress-section">
@@ -388,33 +435,30 @@ const GoalsPage = () => {
             </div>
 
             {/* Milestones */}
-            <div className="goal-milestones">
-              {goal.milestones.map((milestone) => (
-                <div
-                  key={milestone.id}
-                  className={`goal-milestone ${milestone.completed ? 'goal-milestone-completed' : 'goal-milestone-pending'}`}
-                >
-                  <div className={`goal-milestone-checkbox ${milestone.completed ? 'goal-milestone-checkbox-completed' : ''}`}>
-                    {milestone.completed && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                    )}
+            {goal.milestones && goal.milestones.length > 0 && (
+              <div className="goal-milestones">
+                {goal.milestones.map((milestone) => (
+                  <div
+                    key={milestone.id || milestone.text}
+                    className={`goal-milestone ${milestone.completed ? 'goal-milestone-completed' : 'goal-milestone-pending'}`}
+                  >
+                    <div className={`goal-milestone-checkbox ${milestone.completed ? 'goal-milestone-checkbox-completed' : ''}`}>
+                      {milestone.completed && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span className={`goal-milestone-text ${milestone.completed ? 'goal-milestone-text-completed' : ''}`}>
+                      {milestone.text || milestone}
+                    </span>
                   </div>
-                  <span className={`goal-milestone-text ${milestone.completed ? 'goal-milestone-text-completed' : ''}`}>
-                    {milestone.text}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
 
-        {activeTab === 'habits' && (
-          <div className="habits-empty">
-            <p>Habits will appear here.</p>
-          </div>
-        )}
       </div>
 
       {/* Floating Action Button */}
@@ -473,16 +517,34 @@ const GoalsPage = () => {
             setShowGoalModal(false);
             setEditingGoal(null);
           }}
-          onSave={(goalData) => {
-            // In a real app, this would save to an API
-            if (editingGoal) {
-              console.log('Updated goal:', goalData);
-            } else {
-              console.log('New goal:', goalData);
+          onSave={async (goalData) => {
+            try {
+              if (editingGoal) {
+                // Update existing goal
+                const res = await apiFetch(`/api/goals/${editingGoal.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(goalData)
+                });
+                if (res.ok) {
+                  await loadGoals();
+                }
+              } else {
+                // Create new goal
+                const res = await apiFetch('/api/goals', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(goalData)
+                });
+                if (res.ok) {
+                  await loadGoals();
+                }
+              }
+            } catch (err) {
+              console.error('Failed to save goal:', err);
             }
             setShowGoalModal(false);
             setEditingGoal(null);
-            // You could also update the goals state here if needed
           }}
         />
       )}
@@ -491,3 +553,4 @@ const GoalsPage = () => {
 };
 
 export default GoalsPage;
+

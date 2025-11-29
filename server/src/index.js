@@ -33,6 +33,7 @@ console.log('📦 Loading routes...');
 // Import routes
 const todoRoutes = require('./routes/todoRoutes');
 const typeRoutes = require('./routes/typeRoutes');
+const goalRoutes = require('./routes/goalRoutes');
 const googleRoutes = require('./routes/googleRoutes');
 const outlookRoutes = require('./routes/outlookRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
@@ -99,6 +100,7 @@ app.use(passport.session());
 
 // Routes
 app.use('/api/todos', todoRoutes);
+app.use('/api/goals', goalRoutes);
 
 // Mount chat routes (handles actions + AI responses)
 if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {

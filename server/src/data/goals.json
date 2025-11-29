@@ -1,0 +1,14 @@
+[
+  {
+    "id": "tp15ust3",
+    "type": "goal",
+    "title": "Learn French",
+    "category": "study",
+    "target": "Speak French fluently",
+    "deadline": null,
+    "milestones": [],
+    "progress": 0,
+    "createdAt": "2025-11-25T05:26:14.274Z",
+    "updatedAt": "2025-11-25T05:26:14.274Z"
+  }
+]

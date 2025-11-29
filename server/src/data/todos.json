@@ -388,5 +388,45 @@
     "goal": null,
     "status": null,
     "priority": "none"
+  },
+  {
+    "text": "go to gym 5 days a week in the mornings",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "fitness",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "write a poem",
+    "completed": false,
+    "due": "2024-12-15",
+    "type": "",
+    "category": "personal",
+    "goal": null,
+    "status": null,
+    "priority": "none"
+  },
+  {
+    "text": "write a letter",
+    "completed": false,
+    "due": "2025-11-27",
+    "type": "",
+    "category": "work",
+    "goal": null,
+    "status": null,
+    "priority": "high"
+  },
+  {
+    "text": "learn how to speak french",
+    "completed": false,
+    "due": null,
+    "type": "",
+    "category": "study",
+    "goal": null,
+    "status": null,
+    "priority": "none"
   }
 ]
