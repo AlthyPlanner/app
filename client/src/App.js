@@ -12,16 +12,18 @@ import TasksPage from './components/pages/TasksPage';
 import GoalsPage from './components/pages/GoalsPage';
 import ProfilePage from './components/pages/ProfilePage';
 import AlthyPage from './components/pages/AlthyPage';
+import OnboardingPage from './components/pages/OnboardingPage';
 
 const AppContent = () => {
   const location = useLocation();
 
-  // Disable outermost scrolling only when on /app routes
+  // Disable outermost scrolling only when on /app routes (except onboarding)
   useEffect(() => {
     const isAppRoute = location.pathname.startsWith('/app');
+    const isOnboarding = location.pathname === '/app/onboarding';
     
-    if (isAppRoute) {
-      // Disable scrolling on html/body when in app
+    if (isAppRoute && !isOnboarding) {
+      // Disable scrolling on html/body when in app (but not onboarding)
       document.documentElement.style.overflow = 'hidden';
       document.documentElement.style.position = 'fixed';
       document.documentElement.style.width = '100%';
@@ -32,7 +34,7 @@ const AppContent = () => {
       document.body.style.height = '100%';
       document.body.style.touchAction = 'none';
     } else {
-      // Enable scrolling on other routes
+      // Enable scrolling on other routes and onboarding
       document.documentElement.style.overflow = '';
       document.documentElement.style.position = '';
       document.documentElement.style.width = '';
@@ -73,6 +75,7 @@ const AppContent = () => {
           }
         >
           <Route index element={<Navigate to="/app/plan" replace />} />
+          <Route path="onboarding" element={<OnboardingPage />} />
           <Route path="plan" element={<CalendarPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="goals" element={<GoalsPage />} />

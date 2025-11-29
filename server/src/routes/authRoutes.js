@@ -6,7 +6,7 @@ const router = express.Router();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name, accessCode } = req.body;
+    const { email, password, accessCode } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -31,12 +31,12 @@ router.post('/register', async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user
+    // Create user (without name - will be collected in onboarding)
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, name)
-       VALUES ($1, $2, $3)
+      `INSERT INTO users (email, password_hash)
+       VALUES ($1, $2)
        RETURNING id, email, name, timezone, chronotype, planning_style, google_access_token, google_refresh_token, google_profile, created_at`,
-      [email.toLowerCase().trim(), passwordHash, name || null]
+      [email.toLowerCase().trim(), passwordHash]
     );
 
     const user = result.rows[0];
@@ -73,7 +73,9 @@ router.post('/register', async (req, res) => {
             name: user.name,
             timezone: user.timezone,
             chronotype: user.chronotype,
-            planning_style: user.planning_style
+            planning_style: user.planning_style,
+            wake_time: user.wake_time,
+            sleep_time: user.sleep_time
           }
         });
       });
@@ -95,7 +97,7 @@ router.post('/login', async (req, res) => {
 
     // Find user by email (including Google tokens)
     const result = await pool.query(
-      'SELECT id, email, password_hash, name, timezone, chronotype, planning_style, google_access_token, google_refresh_token, google_profile FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, name, timezone, chronotype, planning_style, wake_time, sleep_time, google_access_token, google_refresh_token, google_profile FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -145,7 +147,9 @@ router.post('/login', async (req, res) => {
             name: user.name,
             timezone: user.timezone,
             chronotype: user.chronotype,
-            planning_style: user.planning_style
+            planning_style: user.planning_style,
+            wake_time: user.wake_time,
+            sleep_time: user.sleep_time
           }
         });
       });
@@ -171,6 +175,58 @@ router.post('/logout', (req, res) => {
   });
 });
 
+// Update onboarding data
+router.post('/onboarding', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { name, chronotype, wake_time, sleep_time, planning_style } = req.body;
+
+    if (!name || !chronotype || !wake_time || !sleep_time || !planning_style) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Validate planning_style
+    const validPlanningStyles = ['structured', 'relaxed', 'flexible'];
+    if (!validPlanningStyles.includes(planning_style)) {
+      return res.status(400).json({ error: 'Invalid planning style. Must be one of: structured, relaxed, flexible' });
+    }
+
+    // Update user
+    const result = await pool.query(
+      `UPDATE users 
+       SET name = $1, chronotype = $2, wake_time = $3, sleep_time = $4, planning_style = $5
+       WHERE id = $6
+       RETURNING id, email, name, timezone, chronotype, planning_style, wake_time, sleep_time, created_at`,
+      [name.trim(), chronotype, wake_time, sleep_time, planning_style, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    res.json({ 
+      success: true, 
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        timezone: user.timezone,
+        chronotype: user.chronotype,
+        planning_style: user.planning_style,
+        wake_time: user.wake_time,
+        sleep_time: user.sleep_time
+      }
+    });
+  } catch (error) {
+    console.error('Onboarding update error:', error);
+    res.status(500).json({ error: 'Failed to update onboarding data' });
+  }
+});
+
 // Get current user
 router.get('/me', (req, res) => {
   console.log('Auth check:', {
@@ -184,7 +240,7 @@ router.get('/me', (req, res) => {
   if (req.isAuthenticated() && req.user) {
     // Fetch fresh user data from database
     pool.query(
-      'SELECT id, email, name, timezone, chronotype, planning_style, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, timezone, chronotype, planning_style, wake_time, sleep_time, created_at FROM users WHERE id = $1',
       [req.user.id]
     )
       .then(result => {

@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const ProfileEditModal = ({ user, onClose, onSave }) => {
   const [name, setName] = useState(user.name || '');
   const [role, setRole] = useState(user.role || '');
-  const [chronotype, setChronotype] = useState(user.chronotype || 'early');
+  const [chronotype, setChronotype] = useState(user.chronotype || '');
+  const [wake_time, setWakeTime] = useState(user.wake_time || '');
+  const [sleep_time, setSleepTime] = useState(user.sleep_time || '');
+  const [planning_style, setPlanningStyle] = useState(user.planning_style || '');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    // Format time values for input (HH:MM)
+    if (user.wake_time) {
+      const wakeTime = typeof user.wake_time === 'string' ? user.wake_time : user.wake_time;
+      setWakeTime(wakeTime.substring(0, 5)); // Extract HH:MM from HH:MM:SS
+    }
+    if (user.sleep_time) {
+      const sleepTime = typeof user.sleep_time === 'string' ? user.sleep_time : user.sleep_time;
+      setSleepTime(sleepTime.substring(0, 5)); // Extract HH:MM from HH:MM:SS
+    }
+  }, [user]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -12,7 +27,10 @@ const ProfileEditModal = ({ user, onClose, onSave }) => {
       ...user,
       name: name.trim(),
       role: role.trim(),
-      chronotype
+      chronotype,
+      wake_time,
+      sleep_time,
+      planning_style
     });
   };
 
@@ -164,10 +182,104 @@ const ProfileEditModal = ({ user, onClose, onSave }) => {
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                required
               >
-                <option value="early">Early Bird</option>
-                <option value="normal">Normal</option>
-                <option value="night">Night Owl</option>
+                <option value="">Select chronotype</option>
+                <option value="early_bird">Early Bird</option>
+                <option value="night_owl">Night Owl</option>
+                <option value="balanced">Balanced</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                Wake Time
+              </label>
+              <input
+                type="time"
+                value={wake_time}
+                onChange={(e) => setWakeTime(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                Sleep Time
+              </label>
+              <input
+                type="time"
+                value={sleep_time}
+                onChange={(e) => setSleepTime(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                Planning Style
+              </label>
+              <select
+                value={planning_style}
+                onChange={(e) => setPlanningStyle(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  outline: 'none',
+                  background: 'white',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                required
+              >
+                <option value="">Select planning style</option>
+                <option value="structured">Structured</option>
+                <option value="relaxed">Relaxed</option>
+                <option value="flexible">Flexible</option>
               </select>
             </div>
 

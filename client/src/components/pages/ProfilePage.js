@@ -8,8 +8,8 @@ import './ProfilePage.css';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { logout } = useUser();
-  const [user, setUser] = useState({ name: 'Jing Huang', role: 'Student', chronotype: 'early' });
+  const { logout, user: contextUser, setUser: setContextUser } = useUser();
+  const [user, setUser] = useState({ name: '', role: '', chronotype: '', wake_time: '', sleep_time: '', planning_style: '' });
   const [interests, setInterests] = useState({
     'Mind & Learning': ['Reading', 'Learning Languages', 'Podcasts'],
     'Body & Movement': ['Yoga', 'Hiking', 'Running'],
@@ -32,6 +32,20 @@ const ProfilePage = () => {
   const [selectedSharedCalendar, setSelectedSharedCalendar] = useState(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+
+  // Load user data from context
+  useEffect(() => {
+    if (contextUser) {
+      setUser({
+        name: contextUser.name || '',
+        role: contextUser.role || '',
+        chronotype: contextUser.chronotype || '',
+        wake_time: contextUser.wake_time || '',
+        sleep_time: contextUser.sleep_time || '',
+        planning_style: contextUser.planning_style || ''
+      });
+    }
+  }, [contextUser]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -539,10 +553,36 @@ const ProfilePage = () => {
                 background: '#f3f4f6',
                 color: '#6b7280',
                 fontSize: '12px',
-                fontWeight: '500'
+                fontWeight: '500',
+                marginRight: '8px'
               }}>
-                {user.chronotype}
+                {user.chronotype ? (user.chronotype === 'early_bird' ? 'Early Bird' : user.chronotype === 'night_owl' ? 'Night Owl' : user.chronotype === 'balanced' ? 'Balanced' : user.chronotype) : 'Not set'}
               </span>
+              {user.wake_time && user.sleep_time && (
+                <span style={{
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  background: '#f3f4f6',
+                  color: '#6b7280',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  marginRight: '8px'
+                }}>
+                  {user.wake_time.substring(0, 5)} - {user.sleep_time.substring(0, 5)}
+                </span>
+              )}
+              {user.planning_style && (
+                <span style={{
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  background: '#f3f4f6',
+                  color: '#6b7280',
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}>
+                  {user.planning_style === 'structured' ? 'Structured' : user.planning_style === 'relaxed' ? 'Relaxed' : user.planning_style === 'flexible' ? 'Flexible' : user.planning_style}
+                </span>
+              )}
             </div>
           </div>
 
@@ -1179,9 +1219,41 @@ const ProfilePage = () => {
         <ProfileEditModal
           user={user}
           onClose={() => setShowEditModal(false)}
-          onSave={(updatedUser) => {
-            setUser(updatedUser);
-            setShowEditModal(false);
+          onSave={async (updatedUser) => {
+            try {
+              // Save to backend
+              const res = await apiFetch('/api/auth/onboarding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name: updatedUser.name,
+                  chronotype: updatedUser.chronotype,
+                  wake_time: updatedUser.wake_time,
+                  sleep_time: updatedUser.sleep_time,
+                  planning_style: updatedUser.planning_style
+                })
+              });
+
+              const data = await res.json();
+              if (res.ok && data.success) {
+                // Update local state
+                setUser(updatedUser);
+                // Update context
+                if (setContextUser) {
+                  setContextUser(data.user);
+                }
+                localStorage.setItem('althy_user', JSON.stringify(data.user));
+                setShowEditModal(false);
+                setNotificationMessage('Profile updated successfully!');
+                setShowNotification(true);
+                setTimeout(() => setShowNotification(false), 3000);
+              } else {
+                alert(data.error || 'Failed to update profile');
+              }
+            } catch (error) {
+              console.error('Error updating profile:', error);
+              alert('Failed to update profile. Please try again.');
+            }
           }}
         />
       )}

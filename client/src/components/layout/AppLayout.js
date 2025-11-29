@@ -8,6 +8,7 @@ const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = window.innerWidth < 768;
+  const isOnboarding = location.pathname === '/app/onboarding';
   
   // Extract current page from pathname
   const getCurrentPage = () => {
@@ -32,6 +33,35 @@ const AppLayout = () => {
   // Phone frame - slightly wider
   const iphoneMaxWidth = 380;
   const iphoneAspectRatio = 19.5 / 9;
+
+  // If onboarding, render with layout but hide navigation
+  if (isOnboarding) {
+    return (
+      <div className="app-layout-wrapper">
+        {/* Beautiful gradient background matching login page */}
+        <div className="app-background-gradient" />
+        
+        {/* iPhone 16 Pro Max frame simulation */}
+        <div className="app-phone-frame" style={{
+          maxWidth: `${iphoneMaxWidth}px`,
+          aspectRatio: iphoneAspectRatio,
+          maxHeight: '100vh'
+        }}>
+          {/* Content Container - no header or menu for onboarding */}
+          <div className="app-content-container">
+            {/* Main Content Area - full height for onboarding */}
+            <div className="app-main-content" style={{ 
+              paddingTop: '0',
+              paddingBottom: '0',
+              height: '100%'
+            }}>
+              <Outlet />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout-wrapper">

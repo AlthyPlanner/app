@@ -7,7 +7,6 @@ const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const [name, setName] = useState('');
   const [accessCode, setAccessCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +20,7 @@ const LoginPage = ({ onLogin }) => {
     try {
       const endpoint = isRegistering ? '/api/auth/register' : '/api/auth/login';
       const body = isRegistering 
-        ? { email, password, name: name || null, accessCode }
+        ? { email, password, accessCode }
         : { email, password };
 
       const res = await apiFetch(endpoint, {
@@ -41,8 +40,12 @@ const LoginPage = ({ onLogin }) => {
         if (onLogin) {
           onLogin(data.user);
         }
-        // Navigate to app
-        navigate('/app/plan');
+        // Navigate to onboarding if needed, otherwise to app
+        if (isRegistering && !data.user.name) {
+          navigate('/app/onboarding');
+        } else {
+          navigate('/app/plan');
+        }
       } else {
         setError(data.error || 'Login failed. Please try again.');
         setPassword('');
@@ -85,39 +88,22 @@ const LoginPage = ({ onLogin }) => {
           </div>
 
           {isRegistering && (
-            <>
-              <div className="login-input-group">
-                <label htmlFor="accessCode" className="login-label">Access Code</label>
-                <input
-                  id="accessCode"
-                  type="password"
-                  value={accessCode}
-                  onChange={(e) => {
-                    setAccessCode(e.target.value);
-                    setError('');
-                  }}
-                  className={`login-input ${error ? 'login-input-error' : ''}`}
-                  placeholder="Enter access code"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-              <div className="login-input-group">
-                <label htmlFor="name" className="login-label">Name (Optional)</label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setError('');
-                  }}
-                  className="login-input"
-                  placeholder="Enter your name"
-                  disabled={isLoading}
-                />
-              </div>
-            </>
+            <div className="login-input-group">
+              <label htmlFor="accessCode" className="login-label">Access Code</label>
+              <input
+                id="accessCode"
+                type="password"
+                value={accessCode}
+                onChange={(e) => {
+                  setAccessCode(e.target.value);
+                  setError('');
+                }}
+                className={`login-input ${error ? 'login-input-error' : ''}`}
+                placeholder="Enter access code"
+                disabled={isLoading}
+                required
+              />
+            </div>
           )}
 
           <div className="login-input-group">

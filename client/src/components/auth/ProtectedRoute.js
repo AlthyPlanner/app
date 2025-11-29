@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { apiFetch } from '../../api';
 import LoginPage from './LoginPage';
+import OnboardingPage from '../pages/OnboardingPage';
 
 const USER_KEY = 'althy_user';
 
@@ -89,6 +90,20 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
+  }
+
+  // Check if user needs onboarding (missing name or other required fields)
+  const needsOnboarding = user && (!user.name || !user.chronotype || !user.planning_style);
+  const isOnboardingRoute = location.pathname === '/app/onboarding';
+
+  // If user needs onboarding and is not on onboarding page, redirect to onboarding
+  if (needsOnboarding && !isOnboardingRoute) {
+    return <Navigate to="/app/onboarding" replace />;
+  }
+
+  // If user completed onboarding but is on onboarding page, redirect to plan
+  if (!needsOnboarding && isOnboardingRoute) {
+    return <Navigate to="/app/plan" replace />;
   }
 
   // User is authenticated, render protected content with user context

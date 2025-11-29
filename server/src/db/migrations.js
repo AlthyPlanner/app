@@ -106,6 +106,22 @@ async function initializeDatabase() {
           ALTER TABLE users ADD COLUMN planning_style VARCHAR(50);
         END IF;
         
+        -- Add wake_time column if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'users' AND column_name = 'wake_time'
+        ) THEN
+          ALTER TABLE users ADD COLUMN wake_time TIME;
+        END IF;
+        
+        -- Add sleep_time column if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'users' AND column_name = 'sleep_time'
+        ) THEN
+          ALTER TABLE users ADD COLUMN sleep_time TIME;
+        END IF;
+        
         -- Add Google Calendar token columns if they don't exist
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
